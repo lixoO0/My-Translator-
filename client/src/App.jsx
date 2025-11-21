@@ -1,22 +1,40 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Navbar from './components/Navbar';
+import Login from './pages/Login';
+import Register from './pages/Register';
 
-const Placeholder = ({ title }) => (
-  <section className="placeholder">
-    <h1>{title}</h1>
-    <p>UI goes here.</p>
-  </section>
-);
+const Home = () => {
+  const { user, isAuthenticated } = useAuth();
+
+  return (
+    <section className="home">
+      <h1>Personal AI Translator</h1>
+      {isAuthenticated ? (
+        <p>Welcome back, {user?.username}! Your dashboard will appear here.</p>
+      ) : (
+        <p>Please log in or create an account to get started.</p>
+      )}
+    </section>
+  );
+};
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Placeholder title="Dashboard" />} />
-      <Route path="/login" element={<Placeholder title="Login" />} />
-      <Route path="/register" element={<Placeholder title="Register" />} />
-      <Route path="/history" element={<Placeholder title="History" />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <AuthProvider>
+      <div className="app-shell">
+        <Navbar />
+        <main className="app-content">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+      </div>
+    </AuthProvider>
   );
 }
 
