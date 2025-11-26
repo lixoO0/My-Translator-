@@ -13,13 +13,23 @@ export const REGISTER_USER = gql`
 `;
 
 export const LOGIN_USER = gql`
-  mutation LoginUser($email: String!, $password: String!) {
-    login(input: { email: $email, password: $password }) {
+  mutation LoginUser($emailOrUsername: String!, $password: String!) {
+    login(input: { emailOrUsername: $emailOrUsername, password: $password }) {
       token
       user {
         username
         email
       }
+    }
+  }
+`;
+
+export const TRANSLATE_TEXT = gql`
+  mutation TranslateText($text: String!, $sourceLang: String, $targetLang: String!) {
+    translate(text: $text, sourceLang: $sourceLang, targetLang: $targetLang) {
+      id
+      outputResult
+      createdAt
     }
   }
 `;

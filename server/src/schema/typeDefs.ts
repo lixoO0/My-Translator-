@@ -18,18 +18,32 @@ export const typeDefs = `#graphql
   }
 
   input LoginInput {
-    email: String!
+    emailOrUsername: String!
     password: String!
+  }
+
+  scalar JSON
+
+  type HistoryItem {
+    id: ID!
+    userId: ID!
+    actionType: String!
+    inputContent: String!
+    outputResult: String!
+    metaData: JSON
+    createdAt: String!
   }
 
   type Query {
     _health: String!
     me: User
+    history: [HistoryItem!]!
   }
 
   type Mutation {
     register(input: RegisterInput!): AuthPayload!
     login(input: LoginInput!): AuthPayload!
+    translate(text: String!, sourceLang: String, targetLang: String!): HistoryItem!
   }
 `;
 

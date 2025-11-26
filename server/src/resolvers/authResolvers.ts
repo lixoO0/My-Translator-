@@ -16,7 +16,7 @@ interface RegisterInput {
 }
 
 interface LoginInput {
-  email: string;
+  emailOrUsername: string;
   password: string;
 }
 
@@ -76,13 +76,15 @@ export const authResolvers = {
     },
 
     login: async (_: any, { input }: { input: LoginInput }) => {
-      const { email, password } = input;
+      const { emailOrUsername, password } = input;
 
-      // Знайти користувача за email
-      const user = await User.findOne({ email });
+      // Знайти користувача за email або username
+      const user = await User.findOne({
+        $or: [{ email: emailOrUsername }, { username: emailOrUsername }],
+      });
 
       if (!user) {
-        throw new GraphQLError('Invalid email or password', {
+        throw new GraphQLError('Invalid email/username or password', {
           extensions: { code: 'UNAUTHENTICATED' },
         });
       }
@@ -91,7 +93,7 @@ export const authResolvers = {
       const isPasswordValid = await bcrypt.compare(password, user.password);
 
       if (!isPasswordValid) {
-        throw new GraphQLError('Invalid email or password', {
+        throw new GraphQLError('Invalid email/username or password', {
           extensions: { code: 'UNAUTHENTICATED' },
         });
       }

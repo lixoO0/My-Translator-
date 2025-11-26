@@ -5,7 +5,7 @@ import { LOGIN_USER } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
 
 const initialState = {
-  email: '',
+  emailOrUsername: '',
   password: '',
 };
 
@@ -31,7 +31,7 @@ export const Login = () => {
 
     loginUser({
       variables: {
-        email: formData.email,
+        emailOrUsername: formData.emailOrUsername,
         password: formData.password,
       },
     });
@@ -46,10 +46,10 @@ export const Login = () => {
           <label>
             Email or username
             <input
-              type="email"
-              name="email"
+              type="text"
+              name="emailOrUsername"
               placeholder="Email or username"
-              value={formData.email}
+              value={formData.emailOrUsername}
               onChange={handleChange}
               required
             />

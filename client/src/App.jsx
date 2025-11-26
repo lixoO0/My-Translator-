@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Translate from './pages/Translate';
 
 const Home = () => {
   const { user, isAuthenticated } = useAuth();
@@ -30,6 +31,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/translate" element={<Translate />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
