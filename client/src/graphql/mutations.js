@@ -34,3 +34,13 @@ export const TRANSLATE_TEXT = gql`
   }
 `;
 
+export const SUMMARIZE_TEXT = gql`
+  mutation SummarizeText($text: String!) {
+    summarize(text: $text) {
+      id
+      outputResult
+      createdAt
+    }
+  }
+`;
+

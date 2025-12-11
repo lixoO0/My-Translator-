@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import HistoryModal from './HistoryModal';
+import AccessibilityMenu from './AccessibilityMenu';
 
 export const Navbar = () => {
   const { isAuthenticated, user, logout } = useAuth();
@@ -18,10 +19,12 @@ export const Navbar = () => {
           <>
             <Link to="/login">Login</Link>  
             <Link to="/register">Register</Link>
+            <AccessibilityMenu />
           </>
         ) : (
           <>
             <Link to="/translate">Translate</Link>
+            <Link to="/summarize">Summarize</Link>
             <button 
               type="button" 
               onClick={() => setIsHistoryOpen(true)} 
@@ -31,6 +34,7 @@ export const Navbar = () => {
               History
             </button>
             <span className="navbar__greeting">Hello, {user?.username}</span>
+            <AccessibilityMenu />
             <button type="button" onClick={logout} className="navbar__logout">
               Logout
             </button>

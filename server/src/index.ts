@@ -9,6 +9,7 @@ import mongoose from 'mongoose';
 import { typeDefs } from './schema/typeDefs';
 import { authResolvers } from './resolvers/authResolvers';
 import { translateResolvers } from './resolvers/translateResolvers';
+import { summarizeResolvers } from './resolvers/summarizeResolvers';
 import { historyResolvers } from './resolvers/historyResolvers';
 import { getAuthContext } from './utils/auth';
 
@@ -46,6 +47,7 @@ const resolvers = {
   Mutation: {
     ...authResolvers.Mutation,
     ...translateResolvers.Mutation,
+    ...summarizeResolvers.Mutation,
   },
 };
 

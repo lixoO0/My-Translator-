@@ -44,6 +44,7 @@ export const typeDefs = `#graphql
     register(input: RegisterInput!): AuthPayload!
     login(input: LoginInput!): AuthPayload!
     translate(text: String!, sourceLang: String, targetLang: String!): HistoryItem!
+    summarize(text: String!): HistoryItem!
   }
 `;
 

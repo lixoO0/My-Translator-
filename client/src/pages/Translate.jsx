@@ -3,11 +3,21 @@ import { useMutation } from '@apollo/client/react';
 import { TRANSLATE_TEXT } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const LANGUAGES = [
   { value: 'English', label: 'English' },
   { value: 'Ukrainian', label: 'Ukrainian' },
-  { value: 'Russian', label: 'Russian' },
   { value: 'Spanish', label: 'Spanish' },
   { value: 'French', label: 'French' },
   { value: 'German', label: 'German' },
@@ -72,79 +82,119 @@ export const Translate = () => {
   };
 
   return (
-    <section className="translate-section">
-      <div className="translate-card">
-        <h1 className="translate-title">Translator</h1>
+    <div className="w-full flex justify-center items-center p-4">
+      <Card className="w-full max-w-5xl mx-auto border-slate-800 bg-black/40 backdrop-blur-xl text-slate-100 shadow-2xl">
+        <CardHeader>
+          <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
+            AI Translator
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleTranslate} className="space-y-6">
+            {/* Панель керування - Вибір мови */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="source-lang" className="text-slate-300">
+                  From (Source Language)
+                </Label>
+                <Select value={sourceLang} onValueChange={setSourceLang}>
+                  <SelectTrigger
+                    id="source-lang"
+                    className="bg-slate-950/50 border-slate-700 text-slate-100 focus:border-green-500"
+                  >
+                    <SelectValue placeholder="Select source language" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-900 border-slate-700">
+                    {LANGUAGES_WITH_AUTO.map((lang) => (
+                      <SelectItem
+                        key={lang.value}
+                        value={lang.value}
+                        className="text-slate-100 focus:bg-slate-800"
+                      >
+                        {lang.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-        <form className="translate-form" onSubmit={handleTranslate}>
-          <div className="translate-controls">
-            <label className="translate-label">
-              From (Source Language)
-              <select
-                className="translate-select"
-                value={sourceLang}
-                onChange={(e) => setSourceLang(e.target.value)}
-              >
-                {LANGUAGES_WITH_AUTO.map((lang) => (
-                  <option key={lang.value} value={lang.value}>
-                    {lang.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+              <div className="space-y-2">
+                <Label htmlFor="target-lang" className="text-slate-300">
+                  To (Target Language)
+                </Label>
+                <Select value={targetLang} onValueChange={setTargetLang}>
+                  <SelectTrigger
+                    id="target-lang"
+                    className="bg-slate-950/50 border-slate-700 text-slate-100 focus:border-green-500"
+                  >
+                    <SelectValue placeholder="Select target language" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-900 border-slate-700">
+                    {LANGUAGES.map((lang) => (
+                      <SelectItem
+                        key={lang.value}
+                        value={lang.value}
+                        className="text-slate-100 focus:bg-slate-800"
+                      >
+                        {lang.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-            <label className="translate-label">
-              To (Target Language)
-              <select
-                className="translate-select"
-                value={targetLang}
-                onChange={(e) => setTargetLang(e.target.value)}
-              >
-                {LANGUAGES.map((lang) => (
-                  <option key={lang.value} value={lang.value}>
-                    {lang.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {/* Робоча зона - Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              {/* Ліва колонка - Ввід */}
+              <div className="space-y-2">
+                <Label htmlFor="input-text" className="text-slate-300">
+                  Input Text
+                </Label>
+                <Textarea
+                  id="input-text"
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="Enter text to translate..."
+                  className="min-h-[300px] resize-none bg-slate-950/50 border-slate-700 focus:border-green-500 text-lg p-4 text-slate-100 placeholder:text-slate-500"
+                />
+              </div>
 
-            <button
-              className="translate-button"
+              {/* Права колонка - Результат */}
+              <div className="space-y-2">
+                <Label htmlFor="output-text" className="text-slate-300">
+                  Translation
+                </Label>
+                <Textarea
+                  id="output-text"
+                  value={translatedText}
+                  readOnly
+                  placeholder="Translation will appear here..."
+                  className="min-h-[300px] resize-none bg-slate-900/50 border-slate-800 text-lg p-4 text-slate-100 placeholder:text-slate-500 cursor-default"
+                />
+              </div>
+            </div>
+
+            {/* Кнопка */}
+            <Button
               type="submit"
+              size="lg"
               disabled={loading || !text.trim()}
+              className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold text-lg h-12 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Translating...' : 'Translate'}
-            </button>
-          </div>
+              {loading ? 'Translating...' : 'Translate Text'}
+            </Button>
 
-          <div className="translate-textareas">
-            <div className="translate-textarea-wrapper">
-              <label className="translate-textarea-label">Input Text</label>
-              <textarea
-                className="translate-textarea"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Enter text to translate..."
-                rows={12}
-              />
-            </div>
-
-            <div className="translate-textarea-wrapper">
-              <label className="translate-textarea-label">Translated Text</label>
-              <textarea
-                className="translate-textarea translate-textarea-output"
-                value={translatedText}
-                readOnly
-                placeholder="Translation will appear here..."
-                rows={12}
-              />
-            </div>
-          </div>
-
-          {error && <p className="translate-error">{error.message}</p>}
-        </form>
-      </div>
-    </section>
+            {/* Помилка */}
+            {error && (
+              <p className="text-red-400 text-center mt-4 font-medium">
+                {error.message}
+              </p>
+            )}
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

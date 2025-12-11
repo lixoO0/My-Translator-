@@ -191,12 +191,23 @@ body::before {
   padding: 0.95rem;
   border: none;
   background: linear-gradient(135deg, #4ade80, #16a34a);
-  color: #0a0f1c;
+  color: #ffffff;
   cursor: pointer;
   border-radius: 16px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  transition: all 0.2s;
+}
+
+.auth-submit:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5ee084, #22c55e);
+  box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3);
+}
+
+.auth-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .auth-divider {
@@ -626,4 +637,69 @@ body::before {
 .navbar__history:hover {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* NotFound Styles */
+.not-found-section {
+  width: min(500px, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.not-found-content {
+  text-align: center;
+  backdrop-filter: blur(15px);
+  background: rgba(10, 13, 25, 0.72);
+  padding: 3rem 2.5rem;
+  border-radius: 30px;
+  box-shadow: 0 25px 60px rgba(6, 12, 24, 0.65);
+}
+
+.not-found-title {
+  font-size: 8rem;
+  font-weight: 900;
+  margin: 0;
+  background: linear-gradient(135deg, #4ade80, #16a34a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.05em;
+}
+
+.not-found-message {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem;
+  color: #f4f6fb;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.not-found-description {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 1rem 0 2rem;
+  line-height: 1.6;
+}
+
+.not-found-button {
+  display: inline-block;
+  padding: 1rem 2.5rem;
+  border: none;
+  background: linear-gradient(135deg, #4ade80, #16a34a);
+  color: #0a0f1c;
+  cursor: pointer;
+  border-radius: 16px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: all 0.3s;
+}
+
+.not-found-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(74, 222, 128, 0.3);
 }
