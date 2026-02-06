@@ -10,6 +10,7 @@ export const AuthProvider = ({ children }) => {
     token: null,
     user: null,
   });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const storedToken = localStorage.getItem(AUTH_TOKEN_KEY);
@@ -27,6 +28,8 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem(AUTH_USER_KEY);
       }
     }
+
+    setLoading(false);
   }, []);
 
   const login = (authPayload) => {
@@ -49,12 +52,21 @@ export const AuthProvider = ({ children }) => {
   const value = useMemo(
     () => ({
       ...authState,
+      loading,
       isAuthenticated: Boolean(authState.token),
       login,
       logout,
     }),
-    [authState]
+    [authState, loading]
   );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-200">
+        Loading...
+      </div>
+    );
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
