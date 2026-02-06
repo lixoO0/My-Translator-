@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import SpeechButton from '@/components/ui/SpeechButton';
 import {
   Select,
   SelectContent,
@@ -35,6 +36,24 @@ const LANGUAGES_WITH_AUTO = [
   { value: 'auto', label: 'Auto-detect' },
   ...LANGUAGES,
 ];
+
+const SPEECH_LANGUAGE_MAP = {
+  English: 'en-US',
+  Ukrainian: 'uk-UA',
+  Spanish: 'es-ES',
+  French: 'fr-FR',
+  German: 'de-DE',
+  Italian: 'it-IT',
+  Portuguese: 'pt-PT',
+  Polish: 'pl-PL',
+  Japanese: 'ja-JP',
+  Chinese: 'zh-CN',
+  Korean: 'ko-KR',
+  Arabic: 'ar-SA',
+  Turkish: 'tr-TR',
+};
+
+const getSpeechLanguage = (language) => SPEECH_LANGUAGE_MAP[language] || language;
 
 export const Translate = () => {
   const [text, setText] = useState('');
@@ -151,13 +170,23 @@ export const Translate = () => {
                 <Label htmlFor="input-text" className="text-slate-300">
                   Input Text
                 </Label>
-                <Textarea
-                  id="input-text"
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder="Enter text to translate..."
-                  className="min-h-[300px] resize-none bg-slate-950/50 border-slate-700 focus:border-green-500 text-lg p-4 text-slate-100 placeholder:text-slate-500"
-                />
+                <div className="relative">
+                  <Textarea
+                    id="input-text"
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    placeholder="Enter text to translate..."
+                    className="min-h-[300px] resize-none bg-slate-950/50 border-slate-700 focus:border-green-500 text-lg p-4 pr-12 text-slate-100 placeholder:text-slate-500"
+                  />
+                  <SpeechButton
+                    text={text}
+                    language={
+                      sourceLang === 'auto' ? undefined : getSpeechLanguage(sourceLang)
+                    }
+                    className="absolute right-3 top-3"
+                    ariaLabel="Speak input text"
+                  />
+                </div>
               </div>
 
               {/* Права колонка - Результат */}
@@ -165,13 +194,21 @@ export const Translate = () => {
                 <Label htmlFor="output-text" className="text-slate-300">
                   Translation
                 </Label>
-                <Textarea
-                  id="output-text"
-                  value={translatedText}
-                  readOnly
-                  placeholder="Translation will appear here..."
-                  className="min-h-[300px] resize-none bg-slate-900/50 border-slate-800 text-lg p-4 text-slate-100 placeholder:text-slate-500 cursor-default"
-                />
+                <div className="relative">
+                  <Textarea
+                    id="output-text"
+                    value={translatedText}
+                    readOnly
+                    placeholder="Translation will appear here..."
+                    className="min-h-[300px] resize-none bg-slate-900/50 border-slate-800 text-lg p-4 pr-12 text-slate-100 placeholder:text-slate-500 cursor-default"
+                  />
+                  <SpeechButton
+                    text={translatedText}
+                    language={getSpeechLanguage(targetLang)}
+                    className="absolute right-3 top-3"
+                    ariaLabel="Speak translated text"
+                  />
+                </div>
               </div>
             </div>
 

@@ -26,6 +26,7 @@ const AccessibilityMenu = () => {
     updateSettings({ isHighContrast: checked });
   };
 
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -89,6 +90,7 @@ const AccessibilityMenu = () => {
             onCheckedChange={handleHighContrastToggle}
           />
         </div>
+
       </DropdownMenuContent>
     </DropdownMenu>
   );

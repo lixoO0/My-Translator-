@@ -14,7 +14,8 @@ export const AccessibilityProvider = ({ children }) => {
   const [settings, setSettings] = useState(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : defaultSettings;
+      const parsed = stored ? JSON.parse(stored) : {};
+      return { ...defaultSettings, ...parsed };
     } catch {
       return defaultSettings;
     }

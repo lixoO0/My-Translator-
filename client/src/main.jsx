@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { BrowserRouter } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import App from './App.jsx';
 import './index.css';
 import { apolloClient } from './apollo/client.js';
@@ -11,12 +12,14 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 
 root.render(
   <React.StrictMode>
-    <ApolloProvider client={apolloClient}>
-      <BrowserRouter>
-        <AccessibilityProvider>
-          <App />
-        </AccessibilityProvider>
-      </BrowserRouter>
-    </ApolloProvider>
+    <GoogleOAuthProvider clientId="ВАШ_GOOGLE_CLIENT_ID_ТУТ">
+      <ApolloProvider client={apolloClient}>
+        <BrowserRouter>
+          <AccessibilityProvider>
+            <App />
+          </AccessibilityProvider>
+        </BrowserRouter>
+      </ApolloProvider>
+    </GoogleOAuthProvider>
   </React.StrictMode>
 );

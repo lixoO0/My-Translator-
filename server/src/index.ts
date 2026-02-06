@@ -12,6 +12,7 @@ import { translateResolvers } from './resolvers/translateResolvers';
 import { summarizeResolvers } from './resolvers/summarizeResolvers';
 import { historyResolvers } from './resolvers/historyResolvers';
 import { getAuthContext } from './utils/auth';
+import { getAudioBase64 } from 'google-tts-api';
 
 const resolvers = {
   JSON: {
@@ -58,6 +59,30 @@ async function startServer() {
     credentials: true
   }));
   app.use(bodyParser.json());
+
+  app.post('/api/tts', async (req, res) => {
+    const { text, lang } = req.body || {};
+
+    if (!text || typeof text !== 'string') {
+      return res.status(400).json({ error: 'Text is required' });
+    }
+
+    if (!lang || typeof lang !== 'string') {
+      return res.status(400).json({ error: 'Language is required' });
+    }
+
+    try {
+      const audioBase64 = await getAudioBase64(text, {
+        lang,
+        slow: false,
+        host: 'https://translate.google.com',
+      });
+      return res.json({ audioBase64 });
+    } catch (error) {
+      console.error('TTS error:', error);
+      return res.status(500).json({ error: 'Failed to generate audio' });
+    }
+  });
 
   const schema = makeExecutableSchema({ typeDefs, resolvers });
   const apolloServer = new ApolloServer({ schema });

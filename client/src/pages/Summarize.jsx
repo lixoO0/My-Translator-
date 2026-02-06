@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import SpeechButton from '@/components/ui/SpeechButton';
 
 export const Summarize = () => {
   const [text, setText] = useState('');
@@ -80,13 +81,20 @@ export const Summarize = () => {
                 <Label htmlFor="output-text" className="text-slate-300">
                   Concise Summary
                 </Label>
-                <Textarea
-                  id="output-text"
-                  value={summarizedText}
-                  readOnly
-                  placeholder="Summary will appear here..."
-                  className="min-h-[400px] resize-none bg-slate-900/50 border-slate-800 text-lg p-4 text-slate-100 placeholder:text-slate-500 cursor-default"
-                />
+                <div className="relative">
+                  <Textarea
+                    id="output-text"
+                    value={summarizedText}
+                    readOnly
+                    placeholder="Summary will appear here..."
+                    className="min-h-[400px] resize-none bg-slate-900/50 border-slate-800 text-lg p-4 pr-12 text-slate-100 placeholder:text-slate-500 cursor-default"
+                  />
+                  <SpeechButton
+                    text={summarizedText}
+                    className="absolute right-3 top-3"
+                    ariaLabel="Speak summary"
+                  />
+                </div>
               </div>
             </div>
 

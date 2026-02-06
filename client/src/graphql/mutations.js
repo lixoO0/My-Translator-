@@ -24,6 +24,18 @@ export const LOGIN_USER = gql`
   }
 `;
 
+export const GOOGLE_LOGIN = gql`
+  mutation GoogleLogin($token: String!) {
+    googleLogin(token: $token) {
+      token
+      user {
+        username
+        email
+      }
+    }
+  }
+`;
+
 export const TRANSLATE_TEXT = gql`
   mutation TranslateText($text: String!, $sourceLang: String, $targetLang: String!) {
     translate(text: $text, sourceLang: $sourceLang, targetLang: $targetLang) {

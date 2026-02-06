@@ -11,6 +11,11 @@ export const typeDefs = `#graphql
     user: User!
   }
 
+  type AuthData {
+    token: String!
+    user: User!
+  }
+
   input RegisterInput {
     username: String!
     email: String!
@@ -43,6 +48,7 @@ export const typeDefs = `#graphql
   type Mutation {
     register(input: RegisterInput!): AuthPayload!
     login(input: LoginInput!): AuthPayload!
+    googleLogin(token: String!): AuthData
     translate(text: String!, sourceLang: String, targetLang: String!): HistoryItem!
     summarize(text: String!): HistoryItem!
   }

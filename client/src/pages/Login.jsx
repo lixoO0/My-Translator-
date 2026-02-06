@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { useNavigate } from 'react-router-dom';
-import { LOGIN_USER } from '../graphql/mutations';
+import { useGoogleLogin } from '@react-oauth/google';
+import { GOOGLE_LOGIN, LOGIN_USER } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
 
 const initialState = {
@@ -18,6 +19,23 @@ export const Login = () => {
     onCompleted: ({ login: authData }) => {
       login(authData);
       navigate('/');
+    },
+  });
+
+  const [googleLoginMutation, { error: googleError }] = useMutation(GOOGLE_LOGIN, {
+    onCompleted: ({ googleLogin: authData }) => {
+      login(authData);
+      navigate('/');
+    },
+  });
+
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: ({ access_token }) => {
+      googleLoginMutation({
+        variables: {
+          token: access_token,
+        },
+      });
     },
   });
 
@@ -82,7 +100,12 @@ export const Login = () => {
           </div>
 
           <div className="social-row">
-            <button type="button" className="social-btn google" aria-label="Continue with Google">
+            <button
+              type="button"
+              className="social-btn google"
+              aria-label="Continue with Google"
+              onClick={handleGoogleLogin}
+            >
               G
             </button>
             <button type="button" className="social-btn facebook" aria-label="Continue with Facebook">
@@ -94,7 +117,9 @@ export const Login = () => {
           </div>
         </form>
 
-        {error && <p className="auth-error">{error.message}</p>}
+        {(error || googleError) && (
+          <p className="auth-error">{(error || googleError).message}</p>
+        )}
       </div>
     </section>
   );
