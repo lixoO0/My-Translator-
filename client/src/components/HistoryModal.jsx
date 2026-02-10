@@ -1,18 +1,8 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Copy, MoreHorizontal } from 'lucide-react';
 import { useQuery } from '@apollo/client/react';
 import { GET_HISTORY } from '../graphql/queries';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 export const HistoryModal = ({ isOpen, onClose }) => {
-  const navigate = useNavigate();
   const { data, loading, error } = useQuery(GET_HISTORY, {
     skip: !isOpen, // Не виконуємо запит, якщо модалка закрита
     fetchPolicy: 'network-only', // Завжди отримуємо свіжі дані
@@ -51,39 +41,6 @@ export const HistoryModal = ({ isOpen, onClose }) => {
     return text.substring(0, maxLength) + '...';
   };
 
-  const handleContinue = (item) => {
-    const historyType = item.type || item.actionType;
-
-    const dataToRestore = {
-      type: historyType,
-      input:
-        item.originalText ||
-        item.text ||
-        item.sourceText ||
-        item.input ||
-        item.inputContent ||
-        '',
-      output:
-        item.resultText ||
-        item.translation ||
-        item.translatedText ||
-        item.output ||
-        item.outputResult ||
-        '',
-      sourceLang: item.sourceLanguage || item.sourceLang || item.metaData?.sourceLang || 'auto',
-      targetLang: item.targetLanguage || item.targetLang || item.metaData?.targetLang || 'en',
-    };
-
-    localStorage.setItem('restoreSession', JSON.stringify(dataToRestore));
-    onClose();
-
-    if (historyType === 'TRANSLATION') {
-      navigate('/');
-    } else if (historyType === 'SUMMARY') {
-      navigate('/summarize');
-    }
-  };
-
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -115,36 +72,9 @@ export const HistoryModal = ({ isOpen, onClose }) => {
                 <div className="history-list">
                   {data.history.map((item) => (
                     <div key={item.id} className="history-item">
-                      <div className="history-item-header flex items-center justify-between gap-3">
+                      <div className="history-item-header">
                         <span className="history-item-type">{item.actionType}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="history-item-date">{formatDate(item.createdAt)}</span>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={(event) => event.stopPropagation()}
-                                aria-label="Open history actions"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  handleContinue(item);
-                                }}
-                              >
-                                <ArrowRight className="mr-2 h-4 w-4" />
-                                Open / Continue
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
+                        <span className="history-item-date">{formatDate(item.createdAt)}</span>
                       </div>
                       <div className="history-item-content">
                         <div className="history-item-input">

@@ -28,25 +28,6 @@ export const Summarize = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  useEffect(() => {
-    const savedSession = localStorage.getItem('restoreSession');
-
-    if (savedSession) {
-      try {
-        const parsed = JSON.parse(savedSession);
-        if (parsed.type === 'SUMMARY') {
-          console.log('Restoring session:', parsed);
-          setText(parsed.input || '');
-          setSummarizedText(parsed.output || '');
-
-          localStorage.removeItem('restoreSession');
-        }
-      } catch (e) {
-        console.error('Error parsing session data', e);
-      }
-    }
-  }, []);
-
   if (!isAuthenticated) {
     return null;
   }
