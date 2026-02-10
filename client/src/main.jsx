@@ -9,10 +9,13 @@ import { apolloClient } from './apollo/client.js';
 import { AccessibilityProvider } from './context/AccessibilityContext.jsx';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+console.log('Google ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
 root.render(
   <React.StrictMode>
-    <GoogleOAuthProvider clientId="ВАШ_GOOGLE_CLIENT_ID_ТУТ">
+    <GoogleOAuthProvider clientId={googleClientId}>
       <ApolloProvider client={apolloClient}>
         <BrowserRouter>
           <AccessibilityProvider>
