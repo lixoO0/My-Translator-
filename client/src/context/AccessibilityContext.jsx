@@ -78,3 +78,5 @@ export const useAccessibility = () => {
   return context;
 };
 
+export default AccessibilityProvider;
+
