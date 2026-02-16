@@ -12,6 +12,8 @@ import SpeechButton from '@/components/ui/SpeechButton';
 export const Summarize = () => {
   const [text, setText] = useState('');
   const [summarizedText, setSummarizedText] = useState('');
+  const [summaryLang, setSummaryLang] = useState('uk');
+  const [summaryLength, setSummaryLength] = useState('short');
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
@@ -20,6 +22,22 @@ export const Summarize = () => {
       setSummarizedText(data.summarize.outputResult);
     },
   });
+
+  useEffect(() => {
+    const savedSession = localStorage.getItem('restoreSession');
+    if (!savedSession) return;
+
+    try {
+      const parsed = JSON.parse(savedSession);
+      if (parsed?.type === 'SUMMARIZE') {
+        setText(parsed.input || '');
+        setSummarizedText(parsed.output || '');
+        localStorage.removeItem('restoreSession');
+      }
+    } catch (restoreError) {
+      console.error('Failed to restore session data', restoreError);
+    }
+  }, []);
 
   // Перевірка автентифікації
   useEffect(() => {
@@ -43,6 +61,8 @@ export const Summarize = () => {
       await summarize({
         variables: {
           text: text.trim(),
+          language: summaryLang,
+          length: summaryLength,
         },
       });
     } catch (err) {
@@ -95,6 +115,38 @@ export const Summarize = () => {
                     ariaLabel="Speak summary"
                   />
                 </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="summary-lang" className="text-slate-300">
+                  Output Language
+                </Label>
+                <select
+                  id="summary-lang"
+                  value={summaryLang}
+                  onChange={(e) => setSummaryLang(e.target.value)}
+                  className="rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-slate-100 focus:border-green-500"
+                >
+                  <option value="uk">🇺🇦 Ukrainian</option>
+                  <option value="en">🇬🇧 English</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="summary-length" className="text-slate-300">
+                  Length
+                </Label>
+                <select
+                  id="summary-length"
+                  value={summaryLength}
+                  onChange={(e) => setSummaryLength(e.target.value)}
+                  className="rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-slate-100 focus:border-green-500"
+                >
+                  <option value="short">Short (Key points)</option>
+                  <option value="medium">Medium (Paragraph)</option>
+                  <option value="long">Long (Detailed)</option>
+                </select>
               </div>
             </div>
 

@@ -82,25 +82,36 @@ export const translateText = async (text: string, targetLang: string, sourceLang
   }
 };
 
-export const summarizeText = async (text: string): Promise<string> => {
+export const summarizeText = async (
+  text: string,
+  targetLanguage: string = 'en',
+  length: string = 'short'
+): Promise<string> => {
   try {
     // Ініціалізуємо модель gemini-2.5-flash (перевірено через test-models.js)
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // Формуємо промпт
-    const prompt = `You are an expert summarizer. Your goal is to drastically reduce the text length while keeping only the absolute most important information.
+    let prompt: string;
 
-Rules:
-
-1. Reduce the content volume by at least 50-70%.
-
-2. Use bullet points for key takeaways (max 3-5 bullets).
-
-3. Be direct and concise. No fluff.
-
-4. Output language: Same as input text.
-
-Text to summarize: ${text}`;
+    if (length === 'medium') {
+      prompt = `Provide a balanced summary in ${targetLanguage}.
+- One short paragraph capturing the main idea.
+- Followed by 3 key takeaways.
+- Text to summarize: ${text}`;
+    } else if (length === 'long') {
+      prompt = `Provide a detailed comprehensive analysis in ${targetLanguage}.
+- Detailed introduction.
+- Key points with explanations.
+- Conclusion.
+- Text to summarize: ${text}`;
+    } else {
+      prompt = `Provide a strictly concise summary in ${targetLanguage}.
+- Use ONLY bullet points (3-5 max).
+- NO introduction, NO conclusion, NO 'Here is the summary' phrases.
+- Focus ONLY on the core facts and main idea.
+- Text to summarize: ${text}`;
+    }
 
     // Отримуємо результат від AI
     const result = await model.generateContent(prompt);

@@ -14,7 +14,7 @@ export const summarizeResolvers = {
   Mutation: {
     summarize: async (
       _: any,
-      { text }: { text: string },
+      { text, language, length }: { text: string; language?: string; length?: string },
       context: Context
     ) => {
       // Перевірка автентифікації
@@ -33,7 +33,7 @@ export const summarizeResolvers = {
 
       try {
         // Викликаємо сервіс для сумаризації
-        const summarizedText = await summarizeText(text);
+        const summarizedText = await summarizeText(text, language, length);
 
         // Зберігаємо запис у MongoDB
         const historyRecord = new History({
@@ -41,7 +41,10 @@ export const summarizeResolvers = {
           actionType: 'SUMMARIZE',
           inputContent: text,
           outputResult: summarizedText,
-          metaData: {},
+          metaData: {
+            ...(language ? { targetLang: language } : {}),
+            ...(length ? { summaryLength: length } : {}),
+          },
         });
 
         await historyRecord.save();

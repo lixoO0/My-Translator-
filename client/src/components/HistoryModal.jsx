@@ -1,11 +1,29 @@
 import { useEffect } from 'react';
-import { useQuery } from '@apollo/client/react';
+import { useQuery, useMutation } from '@apollo/client/react';
+import { useNavigate } from 'react-router-dom';
 import { GET_HISTORY } from '../graphql/queries';
+import { DELETE_HISTORY_ITEM } from '../graphql/mutations';
 
 export const HistoryModal = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
   const { data, loading, error } = useQuery(GET_HISTORY, {
     skip: !isOpen, // Не виконуємо запит, якщо модалка закрита
     fetchPolicy: 'network-only', // Завжди отримуємо свіжі дані
+  });
+  const [deleteItem] = useMutation(DELETE_HISTORY_ITEM, {
+    update(cache, { data: mutationData }) {
+      const deletedId = mutationData?.deleteHistoryItem;
+      if (!deletedId) return;
+
+      cache.updateQuery({ query: GET_HISTORY }, (existing) => {
+        if (!existing?.history) return existing;
+        return {
+          history: existing.history.filter((item) => item.id !== deletedId),
+        };
+      });
+    },
+    refetchQueries: [{ query: GET_HISTORY }],
+    awaitRefetchQueries: true,
   });
 
   // Блокуємо прокрутку body, коли modal відкритий
@@ -39,6 +57,36 @@ export const HistoryModal = ({ isOpen, onClose }) => {
     if (!text) return '';
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
+  };
+
+  const handleContinue = (item) => {
+    const dataToRestore = {
+      type: item.actionType,
+      input: item.inputContent || '',
+      output: item.outputResult || '',
+      sourceLang: item.metaData?.sourceLang || 'auto',
+      targetLang: item.metaData?.targetLang || 'English',
+    };
+
+    localStorage.setItem('restoreSession', JSON.stringify(dataToRestore));
+    onClose();
+
+    if (item.actionType === 'SUMMARIZE') {
+      navigate('/summarize');
+    } else {
+      navigate('/translate');
+    }
+  };
+
+  const handleDelete = async (itemId) => {
+    try {
+      await deleteItem({
+        variables: { id: itemId },
+        optimisticResponse: { deleteHistoryItem: itemId },
+      });
+    } catch (deleteError) {
+      console.error('Failed to delete history item:', deleteError);
+    }
   };
 
   return (
@@ -84,6 +132,28 @@ export const HistoryModal = ({ isOpen, onClose }) => {
                         <div className="history-item-output">
                           <strong>Output:</strong>
                           <p>{truncateText(item.outputResult)}</p>
+                        </div>
+                        <div className="history-item-actions">
+                          <button
+                            type="button"
+                            className="history-action-btn"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleContinue(item);
+                            }}
+                          >
+                            Open / Continue
+                          </button>
+                          <button
+                            type="button"
+                            className="history-action-btn history-action-delete"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleDelete(item.id);
+                            }}
+                          >
+                            Delete
+                          </button>
                         </div>
                         {item.metaData && (item.metaData.sourceLang || item.metaData.targetLang) && (
                           <div className="history-item-meta">

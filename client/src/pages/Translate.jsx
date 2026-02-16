@@ -69,6 +69,24 @@ export const Translate = () => {
     },
   });
 
+  useEffect(() => {
+    const savedSession = localStorage.getItem('restoreSession');
+    if (!savedSession) return;
+
+    try {
+      const parsed = JSON.parse(savedSession);
+      if (parsed?.type === 'TRANSLATE') {
+        setText(parsed.input || '');
+        setTranslatedText(parsed.output || '');
+        setSourceLang(parsed.sourceLang || 'auto');
+        setTargetLang(parsed.targetLang || 'English');
+        localStorage.removeItem('restoreSession');
+      }
+    } catch (restoreError) {
+      console.error('Failed to restore session data', restoreError);
+    }
+  }, []);
+
   // Перевірка автентифікації
   useEffect(() => {
     if (!isAuthenticated) {

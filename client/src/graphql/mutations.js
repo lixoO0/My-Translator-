@@ -47,12 +47,18 @@ export const TRANSLATE_TEXT = gql`
 `;
 
 export const SUMMARIZE_TEXT = gql`
-  mutation SummarizeText($text: String!) {
-    summarize(text: $text) {
+  mutation SummarizeText($text: String!, $language: String, $length: String) {
+    summarize(text: $text, language: $language, length: $length) {
       id
       outputResult
       createdAt
     }
+  }
+`;
+
+export const DELETE_HISTORY_ITEM = gql`
+  mutation DeleteHistoryItem($id: ID!) {
+    deleteHistoryItem(id: $id)
   }
 `;
 

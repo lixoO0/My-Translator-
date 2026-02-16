@@ -18,6 +18,19 @@ const authLink = setContext((_, { headers }) => {
 
 export const apolloClient = new ApolloClient({
   link: authLink.concat(httpLink),
-  cache: new InMemoryCache(),
+  cache: new InMemoryCache({
+    typePolicies: {
+      HistoryItem: {
+        keyFields: ['id'],
+      },
+      Query: {
+        fields: {
+          history: {
+            merge: false,
+          },
+        },
+      },
+    },
+  }),
 });
 

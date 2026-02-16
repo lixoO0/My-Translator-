@@ -623,6 +623,41 @@ body::before {
   color: rgba(255, 255, 255, 0.5);
 }
 
+.history-item-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.history-action-btn {
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: all 0.2s ease;
+}
+
+.history-action-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.history-action-delete {
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #fecaca;
+}
+
+.history-action-delete:hover {
+  background: rgba(248, 113, 113, 0.18);
+  border-color: rgba(248, 113, 113, 0.8);
+}
+
 .navbar__history {
   padding: 0.45rem 0.8rem;
   border: 1px solid rgba(255, 255, 255, 0.4);

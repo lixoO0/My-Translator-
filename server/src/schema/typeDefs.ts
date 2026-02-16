@@ -50,7 +50,8 @@ export const typeDefs = `#graphql
     login(input: LoginInput!): AuthPayload!
     googleLogin(token: String!): AuthData
     translate(text: String!, sourceLang: String, targetLang: String!): HistoryItem!
-    summarize(text: String!): HistoryItem!
+    summarize(text: String!, language: String, length: String): HistoryItem!
+    deleteHistoryItem(id: ID!): ID
   }
 `;
 

@@ -47,6 +47,7 @@ const resolvers = {
     ...authResolvers.Mutation,
     ...translateResolvers.Mutation,
     ...summarizeResolvers.Mutation,
+    ...historyResolvers.Mutation,
   },
 };
 
