@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "PAIT - Personal AI Assistant",
+  "version": "1.0.0",
+  "description": "AI Translator & Summarizer Extension",
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "Open PAIT"
+  },
+  "permissions": ["storage", "activeTab"]
+}

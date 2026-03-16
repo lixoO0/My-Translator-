@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { useNavigate } from 'react-router-dom';
-import { useGoogleLogin } from '@react-oauth/google';
-import { GOOGLE_LOGIN, LOGIN_USER } from '../graphql/mutations';
+import { LOGIN_USER } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
 
 const initialState = {
@@ -19,23 +18,6 @@ export const Login = () => {
     onCompleted: ({ login: authData }) => {
       login(authData);
       navigate('/');
-    },
-  });
-
-  const [googleLoginMutation, { error: googleError }] = useMutation(GOOGLE_LOGIN, {
-    onCompleted: ({ googleLogin: authData }) => {
-      login(authData);
-      navigate('/');
-    },
-  });
-
-  const handleGoogleLogin = useGoogleLogin({
-    onSuccess: ({ access_token }) => {
-      googleLoginMutation({
-        variables: {
-          token: access_token,
-        },
-      });
     },
   });
 
@@ -95,31 +77,9 @@ export const Login = () => {
             {loading ? 'Logging in...' : 'Login'}
           </button>
 
-          <div className="auth-divider">
-            <span>OR</span>
-          </div>
-
-          <div className="social-row">
-            <button
-              type="button"
-              className="social-btn google"
-              aria-label="Continue with Google"
-              onClick={handleGoogleLogin}
-            >
-              G
-            </button>
-            <button type="button" className="social-btn facebook" aria-label="Continue with Facebook">
-              f
-            </button>
-            <button type="button" className="social-btn twitter" aria-label="Continue with Twitter">
-              t
-            </button>
-          </div>
         </form>
 
-        {(error || googleError) && (
-          <p className="auth-error">{(error || googleError).message}</p>
-        )}
+        {error && <p className="auth-error">{error.message}</p>}
       </div>
     </section>
   );
