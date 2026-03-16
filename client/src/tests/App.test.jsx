@@ -20,7 +20,7 @@ test('renders the home heading', async () => {
       <MemoryRouter initialEntries={['/']}>
         <AuthProvider>
           <AccessibilityProvider>
-            <App />
+            <App /> 
           </AccessibilityProvider>
         </AuthProvider>
       </MemoryRouter>
