@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from '../components/Layout';
-import Home from '../pages/Home';
 import Login from '../pages/Login';
 import Register from '../pages/Register';
 import Translate from '../pages/Translate';
@@ -22,7 +21,7 @@ const AppRoutes = () => {
 
   const GuestRoute = ({ children }) => {
     if (isAuthenticated) {
-      return <Navigate to="/" replace />;
+      return <Navigate to="/translate" replace />;
     }
     return children;
   };
@@ -33,9 +32,11 @@ const AppRoutes = () => {
         <Route
           path="/"
           element={
-            <ProtectedRoute>
-              <Home />
-            </ProtectedRoute>
+            isAuthenticated ? (
+              <Navigate to="/translate" replace />
+            ) : (
+              <Navigate to="/login" replace />
+            )
           }
         />
         <Route

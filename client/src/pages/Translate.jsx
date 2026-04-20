@@ -15,6 +15,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+// Language pickers use Radix <Select> (custom dropdown), not native <select>/<option>.
+// Dark styling for list items lives on <SelectItem /> + <SelectContent />.
+
 const LANGUAGES = [
   { value: 'English', label: 'English' },
   { value: 'Ukrainian', label: 'Ukrainian' },
@@ -179,7 +182,7 @@ export const Translate = () => {
                   <SelectItem
                     key={lang.value}
                     value={lang.value}
-                    className="text-slate-100 focus:bg-slate-800"
+                    className="bg-slate-800 text-slate-100 focus:bg-slate-700"
                   >
                     {lang.label}
                   </SelectItem>
@@ -211,7 +214,7 @@ export const Translate = () => {
                   <SelectItem
                     key={lang.value}
                     value={lang.value}
-                    className="text-slate-100 focus:bg-slate-800"
+                    className="bg-slate-800 text-slate-100 focus:bg-slate-700"
                   >
                     {lang.label}
                   </SelectItem>

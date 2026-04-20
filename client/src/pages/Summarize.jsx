@@ -100,8 +100,12 @@ export const Summarize = () => {
               onChange={(e) => setSummaryLang(e.target.value)}
               className="h-8 w-full rounded-md border border-slate-700 bg-transparent px-2 text-sm text-slate-100 focus:border-green-500"
             >
-              <option value="uk">Ukrainian</option>
-              <option value="en">English</option>
+              <option value="uk" className="bg-slate-800 text-slate-100">
+                Ukrainian
+              </option>
+              <option value="en" className="bg-slate-800 text-slate-100">
+                English
+              </option>
             </select>
           </div>
 
@@ -112,9 +116,15 @@ export const Summarize = () => {
               onChange={(e) => setSummaryLength(e.target.value)}
               className="h-8 w-full rounded-md border border-slate-700 bg-transparent px-2 text-sm text-slate-100 focus:border-green-500"
             >
-              <option value="short">Short</option>
-              <option value="medium">Medium</option>
-              <option value="long">Long</option>
+              <option value="short" className="bg-slate-800 text-slate-100">
+                Short
+              </option>
+              <option value="medium" className="bg-slate-800 text-slate-100">
+                Medium
+              </option>
+              <option value="long" className="bg-slate-800 text-slate-100">
+                Long
+              </option>
             </select>
           </div>
 

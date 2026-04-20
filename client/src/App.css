@@ -29,6 +29,12 @@ body {
   word-break: break-word;
 }
 
+/* Native <select> dropdowns: some browsers ignore Tailwind on <option> */
+select option {
+  background-color: #1e293b; /* bg-slate-800 */
+  color: #f1f5f9; /* text-slate-100 */
+}
+
 body::before {
   content: '';
   position: fixed;
@@ -75,6 +81,8 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
   padding: 1rem 1.5rem;
   color: #f8fafc;
   position: relative;
@@ -87,6 +95,10 @@ body::before {
   letter-spacing: 0.1em;
   text-decoration: none;
   color: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .navbar__links {
@@ -526,12 +538,6 @@ body::before {
     align-items: center;
     gap: 0.35rem;
     font-size: 0.75rem; /* text-xs */
-  }
-
-  .navbar__greeting {
-    max-width: 110px;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .app-content {

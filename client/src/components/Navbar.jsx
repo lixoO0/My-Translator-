@@ -10,11 +10,17 @@ export const Navbar = () => {
 
   return (
     <header className="navbar">
-      <Link to="/" className="navbar__brand">
+      <Link to={isAuthenticated ? '/translate' : '/'} className="navbar__brand whitespace-nowrap shrink-0">
         PAIT
       </Link>
 
-      <nav className="navbar__links">
+      <nav
+        className={`navbar__links ${
+          isAuthenticated
+            ? 'flex flex-row flex-1 min-w-0 items-center justify-between gap-1 md:gap-2'
+            : ''
+        }`}
+      >
         {!isAuthenticated ? (
           <>
             <NavLink
@@ -61,7 +67,7 @@ export const Navbar = () => {
             >
               History
             </button>
-            <span className="navbar__greeting">Hello, {user?.username}</span>
+            <span className="navbar__greeting hidden md:block">Hello, {user?.username}</span>
             <AccessibilityMenu />
             <button type="button" onClick={logout} className="navbar__logout navbar__link">
               Logout
