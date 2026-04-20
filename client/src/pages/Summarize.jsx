@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import SpeechButton from '@/components/ui/SpeechButton';
 
@@ -71,104 +70,90 @@ export const Summarize = () => {
   };
 
   return (
-    <div className="w-full flex justify-center items-center p-4">
-      <Card className="w-full max-w-5xl mx-auto border-slate-800 bg-black/40 backdrop-blur-xl text-slate-100 shadow-2xl">
-        <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
-            AI Summarizer
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSummarize} className="space-y-6">
-            {/* Робоча зона - Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Ліва колонка - Input */}
-              <div className="space-y-2">
-                <Label htmlFor="input-text" className="text-slate-300">
-                  Text to Summarize
-                </Label>
-                <Textarea
-                  id="input-text"
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder="Enter text to summarize..."
-                  className="min-h-[400px] resize-none bg-slate-950/50 border-slate-700 focus:border-green-500 text-lg p-4 text-slate-100 placeholder:text-slate-500"
-                />
-              </div>
+    <div className="w-full h-full flex flex-col overflow-x-hidden break-words">
+      <form
+        onSubmit={handleSummarize}
+        className="w-full flex-1 min-h-0 flex flex-col gap-2 overflow-hidden"
+      >
+        {/* Level 1: Input */}
+        <div className="flex-1 basis-0 min-h-0 flex flex-col gap-1">
+          <Label htmlFor="input-text" className="text-slate-300 text-xs">
+            Input
+          </Label>
+          <div className="relative flex-1 min-h-0">
+            <Textarea
+              id="input-text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Type text…"
+              className="h-full min-h-0 resize-none overflow-y-auto rounded-md border border-slate-700 bg-slate-800/60 p-2 pr-9 text-sm text-slate-100 placeholder:text-slate-400 focus:border-green-500 break-words overflow-x-hidden"
+            />
+          </div>
+        </div>
 
-              {/* Права колонка - Summary */}
-              <div className="space-y-2">
-                <Label htmlFor="output-text" className="text-slate-300">
-                  Concise Summary
-                </Label>
-                <div className="relative">
-                  <Textarea
-                    id="output-text"
-                    value={summarizedText}
-                    readOnly
-                    placeholder="Summary will appear here..."
-                    className="min-h-[400px] resize-none bg-slate-900/50 border-slate-800 text-lg p-4 pr-12 text-slate-100 placeholder:text-slate-500 cursor-default"
-                  />
-                  <SpeechButton
-                    text={summarizedText}
-                    className="absolute right-3 top-3"
-                    ariaLabel="Speak summary"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="summary-lang" className="text-slate-300">
-                  Output Language
-                </Label>
-                <select
-                  id="summary-lang"
-                  value={summaryLang}
-                  onChange={(e) => setSummaryLang(e.target.value)}
-                  className="rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-slate-100 focus:border-green-500"
-                >
-                  <option value="uk">🇺🇦 Ukrainian</option>
-                  <option value="en">🇬🇧 English</option>
-                </select>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="summary-length" className="text-slate-300">
-                  Length
-                </Label>
-                <select
-                  id="summary-length"
-                  value={summaryLength}
-                  onChange={(e) => setSummaryLength(e.target.value)}
-                  className="rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-slate-100 focus:border-green-500"
-                >
-                  <option value="short">Short (Key points)</option>
-                  <option value="medium">Medium (Paragraph)</option>
-                  <option value="long">Long (Detailed)</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Кнопка */}
-            <Button
-              type="submit"
-              size="lg"
-              disabled={loading || !text.trim()}
-              className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold text-lg h-12 disabled:opacity-50 disabled:cursor-not-allowed"
+        {/* Level 2: Control bar */}
+        <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1">
+          <div className="flex-1 min-w-0">
+            <select
+              id="summary-lang"
+              value={summaryLang}
+              onChange={(e) => setSummaryLang(e.target.value)}
+              className="h-8 w-full rounded-md border border-slate-700 bg-transparent px-2 text-sm text-slate-100 focus:border-green-500"
             >
-              {loading ? 'Summarizing...' : 'Summarize Text'}
-            </Button>
+              <option value="uk">Ukrainian</option>
+              <option value="en">English</option>
+            </select>
+          </div>
 
-            {/* Помилка */}
-            {error && (
-              <p className="text-red-400 text-center mt-4 font-medium">
-                {error.message}
-              </p>
-            )}
-          </form>
-        </CardContent>
-      </Card>
+          <div className="flex-1 min-w-0">
+            <select
+              id="summary-length"
+              value={summaryLength}
+              onChange={(e) => setSummaryLength(e.target.value)}
+              className="h-8 w-full rounded-md border border-slate-700 bg-transparent px-2 text-sm text-slate-100 focus:border-green-500"
+            >
+              <option value="short">Short</option>
+              <option value="medium">Medium</option>
+              <option value="long">Long</option>
+            </select>
+          </div>
+
+          <Button
+            type="submit"
+            disabled={loading || !text.trim()}
+            className="h-8 shrink-0 rounded-md bg-green-600 px-3 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? '…' : 'Summarize'}
+          </Button>
+        </div>
+
+        {/* Level 3: Output */}
+        <div className="flex-1 basis-0 min-h-0 flex flex-col gap-1">
+          <Label htmlFor="output-text" className="text-slate-300 text-xs">
+            Output
+          </Label>
+          <div className="relative flex-1 min-h-0">
+            <Textarea
+              id="output-text"
+              value={summarizedText}
+              readOnly
+              placeholder="Summary…"
+              className="h-full min-h-0 resize-none overflow-y-auto rounded-md border border-slate-700 bg-slate-800/40 p-2 pr-9 text-sm text-slate-100 placeholder:text-slate-400 cursor-default break-words overflow-x-hidden"
+            />
+            <SpeechButton
+              text={summarizedText}
+              className="absolute bottom-2 right-2"
+              ariaLabel="Speak summary"
+            />
+          </div>
+        </div>
+
+        {error && (
+          <p className="text-red-400 text-xs leading-snug break-words">
+            {error.message}
+          </p>
+        )}
+      </form>
     </div>
   );
 };

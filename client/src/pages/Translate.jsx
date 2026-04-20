@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import SpeechButton from '@/components/ui/SpeechButton';
 import {
@@ -118,137 +117,146 @@ export const Translate = () => {
     }
   };
 
+  const handleSwapLanguages = () => {
+    if (sourceLang === 'auto') {
+      // Auto-detect isn't a concrete language to swap with.
+      // Promote current target to source and reset target to a sensible default.
+      setSourceLang(targetLang);
+      setTargetLang('English');
+      setText(translatedText || text);
+      setTranslatedText('');
+      return;
+    }
+
+    const nextSource = targetLang;
+    const nextTarget = sourceLang;
+    setSourceLang(nextSource);
+    setTargetLang(nextTarget);
+    setText(translatedText || text);
+    setTranslatedText('');
+  };
+
   return (
-    <div className="w-full flex justify-center items-center p-4">
-      <Card className="w-full max-w-5xl mx-auto border-slate-800 bg-black/40 backdrop-blur-xl text-slate-100 shadow-2xl">
-        <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
-            AI Translator
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleTranslate} className="space-y-6">
-            {/* Панель керування - Вибір мови */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="source-lang" className="text-slate-300">
-                  From (Source Language)
-                </Label>
-                <Select value={sourceLang} onValueChange={setSourceLang}>
-                  <SelectTrigger
-                    id="source-lang"
-                    className="bg-slate-950/50 border-slate-700 text-slate-100 focus:border-green-500"
+    <div className="w-full h-full flex flex-col overflow-x-hidden break-words">
+      <form
+        onSubmit={handleTranslate}
+        className="w-full flex-1 min-h-0 flex flex-col gap-2 overflow-hidden"
+      >
+        {/* Top: Input */}
+        <div className="flex-1 basis-0 min-h-0 flex flex-col gap-1">
+          <Label htmlFor="input-text" className="text-slate-300 text-xs">
+            Input
+          </Label>
+          <div className="relative flex-1 min-h-0">
+            <Textarea
+              id="input-text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Type text…"
+              className="h-full min-h-0 resize-none overflow-y-auto rounded-md border border-slate-700 bg-slate-800/60 p-2 pr-9 text-sm text-slate-100 placeholder:text-slate-400 focus:border-green-500 break-words overflow-x-hidden"
+            />
+            <SpeechButton
+              text={text}
+              language={sourceLang === 'auto' ? undefined : getSpeechLanguage(sourceLang)}
+              className="absolute bottom-2 right-2"
+              ariaLabel="Speak input text"
+            />
+          </div>
+        </div>
+
+        {/* Middle: Control bar */}
+        <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1">
+          <div className="flex-1 min-w-0">
+            <Select value={sourceLang} onValueChange={setSourceLang}>
+              <SelectTrigger
+                id="source-lang"
+                className="h-8 w-full bg-transparent border-slate-700 text-slate-100 text-sm px-2 focus:border-green-500"
+              >
+                <SelectValue placeholder="From" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-slate-700">
+                {LANGUAGES_WITH_AUTO.map((lang) => (
+                  <SelectItem
+                    key={lang.value}
+                    value={lang.value}
+                    className="text-slate-100 focus:bg-slate-800"
                   >
-                    <SelectValue placeholder="Select source language" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-700">
-                    {LANGUAGES_WITH_AUTO.map((lang) => (
-                      <SelectItem
-                        key={lang.value}
-                        value={lang.value}
-                        className="text-slate-100 focus:bg-slate-800"
-                      >
-                        {lang.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                    {lang.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="target-lang" className="text-slate-300">
-                  To (Target Language)
-                </Label>
-                <Select value={targetLang} onValueChange={setTargetLang}>
-                  <SelectTrigger
-                    id="target-lang"
-                    className="bg-slate-950/50 border-slate-700 text-slate-100 focus:border-green-500"
+          <button
+            type="button"
+            onClick={handleSwapLanguages}
+            className="h-8 w-8 shrink-0 rounded-md border border-slate-700 bg-slate-800/60 text-slate-100 text-sm hover:bg-slate-800"
+            aria-label="Swap languages"
+            title="Swap languages"
+          >
+            ⇄
+          </button>
+
+          <div className="flex-1 min-w-0">
+            <Select value={targetLang} onValueChange={setTargetLang}>
+              <SelectTrigger
+                id="target-lang"
+                className="h-8 w-full bg-transparent border-slate-700 text-slate-100 text-sm px-2 focus:border-green-500"
+              >
+                <SelectValue placeholder="To" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-slate-700">
+                {LANGUAGES.map((lang) => (
+                  <SelectItem
+                    key={lang.value}
+                    value={lang.value}
+                    className="text-slate-100 focus:bg-slate-800"
                   >
-                    <SelectValue placeholder="Select target language" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-700">
-                    {LANGUAGES.map((lang) => (
-                      <SelectItem
-                        key={lang.value}
-                        value={lang.value}
-                        className="text-slate-100 focus:bg-slate-800"
-                      >
-                        {lang.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+                    {lang.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            {/* Робоча зона - Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-              {/* Ліва колонка - Ввід */}
-              <div className="space-y-2">
-                <Label htmlFor="input-text" className="text-slate-300">
-                  Input Text
-                </Label>
-                <div className="relative">
-                  <Textarea
-                    id="input-text"
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    placeholder="Enter text to translate..."
-                    className="min-h-[300px] resize-none bg-slate-950/50 border-slate-700 focus:border-green-500 text-lg p-4 pr-12 text-slate-100 placeholder:text-slate-500"
-                  />
-                  <SpeechButton
-                    text={text}
-                    language={
-                      sourceLang === 'auto' ? undefined : getSpeechLanguage(sourceLang)
-                    }
-                    className="absolute right-3 top-3"
-                    ariaLabel="Speak input text"
-                  />
-                </div>
-              </div>
+          <Button
+            type="submit"
+            disabled={loading || !text.trim()}
+            className="h-8 shrink-0 rounded-md bg-green-600 px-3 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? '…' : 'Translate'}
+          </Button>
+        </div>
 
-              {/* Права колонка - Результат */}
-              <div className="space-y-2">
-                <Label htmlFor="output-text" className="text-slate-300">
-                  Translation
-                </Label>
-                <div className="relative">
-                  <Textarea
-                    id="output-text"
-                    value={translatedText}
-                    readOnly
-                    placeholder="Translation will appear here..."
-                    className="min-h-[300px] resize-none bg-slate-900/50 border-slate-800 text-lg p-4 pr-12 text-slate-100 placeholder:text-slate-500 cursor-default"
-                  />
-                  <SpeechButton
-                    text={translatedText}
-                    language={getSpeechLanguage(targetLang)}
-                    className="absolute right-3 top-3"
-                    ariaLabel="Speak translated text"
-                  />
-                </div>
-              </div>
-            </div>
+        {/* Bottom: Output */}
+        <div className="flex-1 basis-0 min-h-0 flex flex-col gap-1">
+          <Label htmlFor="output-text" className="text-slate-300 text-xs">
+            Output
+          </Label>
+          <div className="relative flex-1 min-h-0">
+            <Textarea
+              id="output-text"
+              value={translatedText}
+              readOnly
+              placeholder="Translation…"
+              className="h-full min-h-0 resize-none overflow-y-auto rounded-md border border-slate-700 bg-slate-800/40 p-2 pr-9 text-sm text-slate-100 placeholder:text-slate-400 cursor-default break-words overflow-x-hidden"
+            />
+            <SpeechButton
+              text={translatedText}
+              language={getSpeechLanguage(targetLang)}
+              className="absolute bottom-2 right-2"
+              ariaLabel="Speak translated text"
+            />
+          </div>
+        </div>
 
-            {/* Кнопка */}
-            <Button
-              type="submit"
-              size="lg"
-              disabled={loading || !text.trim()}
-              className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold text-lg h-12 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Translating...' : 'Translate Text'}
-            </Button>
-
-            {/* Помилка */}
-            {error && (
-              <p className="text-red-400 text-center mt-4 font-medium">
-                {error.message}
-              </p>
-            )}
-          </form>
-        </CardContent>
-      </Card>
+        {error && (
+          <p className="text-red-400 text-xs leading-snug break-words">
+            {error.message}
+          </p>
+        )}
+      </form>
     </div>
   );
 };
