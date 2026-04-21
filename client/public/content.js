@@ -7,28 +7,23 @@ function removeTooltip() {
   if (existing) existing.remove();
 }
 
-function ensureOutsideClickListener() {
-  if (window.__paitOutsideTooltipListenerInstalled) return;
-  window.__paitOutsideTooltipListenerInstalled = true;
+document.addEventListener('mousedown', (e) => {
+  const tooltip = document.getElementById(TOOLTIP_ID);
+  if (tooltip && !tooltip.contains(e.target)) {
+    tooltip.remove();
+  }
+});
 
-  document.addEventListener(
-    'mousedown',
-    (e) => {
-      const tooltip = document.getElementById(TOOLTIP_ID);
-      if (!tooltip) return;
-      if (tooltip.contains(e.target)) return;
-      removeTooltip();
-    },
-    true
-  );
-}
+document.addEventListener('mouseup', (e) => {
+  // ЗАХИСТ: Якщо ми відпустили мишку над самим тултипом (наприклад, клікаємо кнопку),
+  // нічого не перемальовуємо / не видаляємо.
+  if (e.target.closest(`#${TOOLTIP_ID}`)) {
+    return;
+  }
 
-ensureOutsideClickListener();
-
-window.addEventListener('mouseup', () => {
   const selection = window.getSelection?.();
-  const selected = selection?.toString?.().trim();
-  if (!selected) {
+  const selectedText = selection?.toString?.().trim();
+  if (!selectedText) {
     removeTooltip();
     return;
   }
@@ -52,34 +47,59 @@ window.addEventListener('mouseup', () => {
   saveBtn.id = 'pait-btn-save';
   saveBtn.type = 'button';
   saveBtn.textContent = '📝 Save';
-  saveBtn.addEventListener('click', () => {
-    saveBtn.textContent = '⏳ Saving...';
-
-    if (!chrome?.runtime?.sendMessage) {
-      saveBtn.textContent = '❌ Error';
-      return;
-    }
-
-    chrome.runtime.sendMessage({ action: 'SAVE_NOTE', text: selected }, (response) => {
-      const ok = Boolean(response?.ok);
-      if (ok) {
-        saveBtn.textContent = '✅ Saved!';
-        window.setTimeout(() => removeTooltip(), 2000);
-        return;
-      }
-      saveBtn.textContent = '❌ Error';
-    });
-  });
 
   tooltip.appendChild(translateBtn);
   tooltip.appendChild(saveBtn);
   document.body.appendChild(tooltip);
+
+  const saveBtnEl = document.getElementById('pait-btn-save');
+  if (saveBtnEl) {
+    // Зупиняємо mousedown, щоб він не спливав вище
+    saveBtnEl.addEventListener('mousedown', (e) => e.stopPropagation());
+
+    saveBtnEl.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const originalText = saveBtnEl.textContent;
+      saveBtnEl.textContent = '⏳ Saving...';
+      saveBtnEl.style.pointerEvents = 'none'; // блокуємо подвійний клік
+
+      if (!chrome?.runtime?.sendMessage) {
+        saveBtnEl.textContent = '❌ Error';
+        saveBtnEl.style.pointerEvents = '';
+        console.error('PAIT Save Error: chrome.runtime.sendMessage unavailable');
+        return;
+      }
+
+      chrome.runtime.sendMessage(
+        {
+          action: 'SAVE_NOTE',
+          text: selectedText,
+          sourceUrl: window.location.href,
+        },
+        (response) => {
+        if (chrome.runtime.lastError || !response || !response.ok) {
+          saveBtnEl.textContent = '❌ Error';
+          saveBtnEl.style.pointerEvents = '';
+          console.error('PAIT Save Error:', chrome.runtime.lastError || response?.error);
+        } else {
+          saveBtnEl.textContent = '✅ Saved!';
+          window.setTimeout(() => {
+            const t = document.getElementById(TOOLTIP_ID);
+            if (t) t.remove();
+          }, 2000);
+        }
+        }
+      );
+    });
+  }
 
   const top = rect.top + window.scrollY - 40;
   const left = rect.left + window.scrollX;
   tooltip.style.top = `${Math.max(8, top)}px`;
   tooltip.style.left = `${Math.max(8, left)}px`;
 
-  console.log('PAIT selected text:', selected);
+  console.log('PAIT selected text:', selectedText);
 });
 

@@ -17,13 +17,19 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
         return;
       }
 
-      const query = `
-        mutation CreateNote($text: String!) {
-          createNote(text: $text) {
-            id
+      const graphqlQuery = {
+        query: `
+          mutation CreateNote($text: String!, $sourceUrl: String) {
+            createNote(text: $text, sourceUrl: $sourceUrl) {
+              id
+            }
           }
-        }
-      `;
+        `,
+        variables: {
+          text: request.text,
+          sourceUrl: request.sourceUrl,
+        },
+      };
 
       const res = await fetch(GRAPHQL_URL, {
         method: 'POST',
@@ -31,10 +37,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          query,
-          variables: { text: String(request.text ?? '') },
-        }),
+        body: JSON.stringify(graphqlQuery),
       });
 
       const data = await res.json().catch(() => null);
@@ -54,6 +57,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     }
   })();
 
+  // ВАЖЛИВО: return true має бути синхронно в гілці SAVE_NOTE
   return true;
 });
 
