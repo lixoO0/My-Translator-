@@ -62,6 +62,7 @@ export const typeDefs = `#graphql
     summarize(text: String!, language: String, length: String): HistoryItem!
     deleteHistoryItem(id: ID!): ID
     createNote(text: String!, sourceUrl: String): Note
+    deleteNote(id: ID!): Boolean
   }
 `;
 
