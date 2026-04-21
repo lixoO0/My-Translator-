@@ -173,11 +173,11 @@ export const Translate = () => {
             <Select value={sourceLang} onValueChange={setSourceLang}>
               <SelectTrigger
                 id="source-lang"
-                className="h-8 w-full bg-transparent border-slate-700 text-slate-100 text-sm px-2 focus:border-green-500"
+                className="h-8 w-full bg-transparent bg-slate-800 text-slate-100 border-slate-700 text-sm px-2 focus:border-green-500"
               >
                 <SelectValue placeholder="From" />
               </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700">
+              <SelectContent className="bg-slate-800 border-slate-700">
                 {LANGUAGES_WITH_AUTO.map((lang) => (
                   <SelectItem
                     key={lang.value}
@@ -205,11 +205,11 @@ export const Translate = () => {
             <Select value={targetLang} onValueChange={setTargetLang}>
               <SelectTrigger
                 id="target-lang"
-                className="h-8 w-full bg-transparent border-slate-700 text-slate-100 text-sm px-2 focus:border-green-500"
+                className="h-8 w-full bg-transparent bg-slate-800 text-slate-100 border-slate-700 text-sm px-2 focus:border-green-500"
               >
                 <SelectValue placeholder="To" />
               </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700">
+              <SelectContent className="bg-slate-800 border-slate-700">
                 {LANGUAGES.map((lang) => (
                   <SelectItem
                     key={lang.value}

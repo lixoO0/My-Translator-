@@ -39,6 +39,9 @@ export const AuthProvider = ({ children }) => {
 
     localStorage.setItem(AUTH_TOKEN_KEY, token);
     localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.set({ authToken: token });
+    }
 
     setAuthState({ token, user });
   };
@@ -46,6 +49,9 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(AUTH_USER_KEY);
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.remove('authToken');
+    }
     setAuthState({ token: null, user: null });
   };
 

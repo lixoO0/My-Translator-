@@ -5,6 +5,7 @@ import Register from '../pages/Register';
 import Translate from '../pages/Translate';
 import Summarize from '../pages/Summarize';
 import History from '../pages/History';
+import Notebook from '../pages/Notebook';
 import NotFound from '../pages/NotFound';
 import { useAuth } from '../context/AuthContext';
 
@@ -76,6 +77,14 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute>
               <History />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notebook"
+          element={
+            <ProtectedRoute>
+              <Notebook />
             </ProtectedRoute>
           }
         />

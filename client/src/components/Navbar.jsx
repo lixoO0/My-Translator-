@@ -59,6 +59,14 @@ export const Navbar = () => {
             >
               Summarize
             </NavLink>
+            <NavLink
+              to="/notebook"
+              className={({ isActive }) =>
+                `navbar__link navbar__tab ${isActive ? 'navbar__link--active' : ''}`
+              }
+            >
+              Notebook
+            </NavLink>
             <button 
               type="button" 
               onClick={() => setIsHistoryOpen(true)} 

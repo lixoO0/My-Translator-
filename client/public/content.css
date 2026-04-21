@@ -1,0 +1,33 @@
+/* PAIT Web Clipper tooltip (isolated styles) */
+#pait-magic-tooltip {
+  position: absolute;
+  z-index: 2147483647;
+  display: flex;
+  gap: 8px;
+  background-color: #1e293b;
+  padding: 6px 10px;
+  border-radius: 6px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border: 1px solid #334155;
+  pointer-events: auto;
+}
+
+#pait-magic-tooltip button {
+  background: transparent;
+  border: none;
+  color: #f1f5f9;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+#pait-magic-tooltip button:hover {
+  background-color: #334155;
+}
+

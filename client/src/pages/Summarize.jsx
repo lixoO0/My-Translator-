@@ -98,7 +98,7 @@ export const Summarize = () => {
               id="summary-lang"
               value={summaryLang}
               onChange={(e) => setSummaryLang(e.target.value)}
-              className="h-8 w-full rounded-md border border-slate-700 bg-transparent px-2 text-sm text-slate-100 focus:border-green-500"
+              className="h-8 w-full rounded-md border border-slate-700 bg-transparent bg-slate-800 text-slate-100 px-2 text-sm focus:border-green-500"
             >
               <option value="uk" className="bg-slate-800 text-slate-100">
                 Ukrainian
@@ -114,7 +114,7 @@ export const Summarize = () => {
               id="summary-length"
               value={summaryLength}
               onChange={(e) => setSummaryLength(e.target.value)}
-              className="h-8 w-full rounded-md border border-slate-700 bg-transparent px-2 text-sm text-slate-100 focus:border-green-500"
+              className="h-8 w-full rounded-md border border-slate-700 bg-transparent bg-slate-800 text-slate-100 px-2 text-sm focus:border-green-500"
             >
               <option value="short" className="bg-slate-800 text-slate-100">
                 Short
