@@ -9,6 +9,7 @@ import { authResolvers } from './resolvers/authResolvers';
 import { translateResolvers } from './resolvers/translateResolvers';
 import { summarizeResolvers } from './resolvers/summarizeResolvers';
 import { historyResolvers } from './resolvers/historyResolvers';
+import { noteResolvers } from './resolvers/noteResolvers';
 import { getAuthContext } from './utils/auth';
 import { getAudioBase64 } from 'google-tts-api';
 
@@ -42,12 +43,14 @@ const resolvers = {
     _health: () => 'ok',
     ...authResolvers.Query,
     ...historyResolvers.Query,
+    ...noteResolvers.Query,
   },
   Mutation: {
     ...authResolvers.Mutation,
     ...translateResolvers.Mutation,
     ...summarizeResolvers.Mutation,
     ...historyResolvers.Mutation,
+    ...noteResolvers.Mutation,
   },
 };
 

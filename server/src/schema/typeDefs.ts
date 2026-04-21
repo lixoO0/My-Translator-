@@ -39,10 +39,19 @@ export const typeDefs = `#graphql
     createdAt: String!
   }
 
+  type Note {
+    id: ID!
+    user: ID!
+    text: String!
+    sourceUrl: String
+    createdAt: String
+  }
+
   type Query {
     _health: String!
     me: User
     history: [HistoryItem!]!
+    getNotes: [Note]
   }
 
   type Mutation {
@@ -52,6 +61,7 @@ export const typeDefs = `#graphql
     translate(text: String!, sourceLang: String, targetLang: String!): HistoryItem!
     summarize(text: String!, language: String, length: String): HistoryItem!
     deleteHistoryItem(id: ID!): ID
+    createNote(text: String!, sourceUrl: String): Note
   }
 `;
 
