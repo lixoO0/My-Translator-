@@ -85,7 +85,7 @@ export const translateText = async (text: string, targetLang: string, sourceLang
 export const summarizeText = async (
   text: string,
   targetLanguage: string = 'en',
-  length: string = 'short'
+  length: string = 'medium'
 ): Promise<string> => {
   try {
     // Ініціалізуємо модель gemini-2.5-flash (перевірено через test-models.js)
@@ -94,23 +94,15 @@ export const summarizeText = async (
     // Формуємо промпт
     let prompt: string;
 
-    if (length === 'medium') {
-      prompt = `Provide a balanced summary in ${targetLanguage}.
-- One short paragraph capturing the main idea.
-- Followed by 3 key takeaways.
-- Text to summarize: ${text}`;
+    if (length === 'short') {
+      prompt = `Provide a very brief summary in ${targetLanguage} in 1-2 sentences max.
+Text to summarize: ${text}`;
     } else if (length === 'long') {
-      prompt = `Provide a detailed comprehensive analysis in ${targetLanguage}.
-- Detailed introduction.
-- Key points with explanations.
-- Conclusion.
-- Text to summarize: ${text}`;
+      prompt = `Provide a detailed, comprehensive summary in ${targetLanguage} with key points.
+Text to summarize: ${text}`;
     } else {
-      prompt = `Provide a strictly concise summary in ${targetLanguage}.
-- Use ONLY bullet points (3-5 max).
-- NO introduction, NO conclusion, NO 'Here is the summary' phrases.
-- Focus ONLY on the core facts and main idea.
-- Text to summarize: ${text}`;
+      prompt = `Provide a standard, concise summary in ${targetLanguage}.
+Text to summarize: ${text}`;
     }
 
     // Отримуємо результат від AI

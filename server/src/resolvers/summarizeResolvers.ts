@@ -32,8 +32,12 @@ export const summarizeResolvers = {
       }
 
       try {
+        const normalizedLength = ['short', 'medium', 'long'].includes((length ?? '').toString())
+          ? (length ?? 'medium')
+          : 'medium';
+
         // Викликаємо сервіс для сумаризації
-        const summarizedText = await summarizeText(text, language, length);
+        const summarizedText = await summarizeText(text, language, normalizedLength);
 
         // Зберігаємо запис у MongoDB
         const historyRecord = new History({
@@ -43,7 +47,7 @@ export const summarizeResolvers = {
           outputResult: summarizedText,
           metaData: {
             ...(language ? { targetLang: language } : {}),
-            ...(length ? { summaryLength: length } : {}),
+            ...(normalizedLength ? { summaryLength: normalizedLength } : {}),
           },
         });
 
