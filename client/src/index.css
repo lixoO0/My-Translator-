@@ -5,6 +5,8 @@
 /* Accessibility: Font scaling */
 html {
   font-size: calc(16px * var(--font-scale, 1));
+  width: 100vw;
+  height: 100vh;
 }
 
 :root {
@@ -61,6 +63,13 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  width: 100vw;
+  height: 100vh;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
 }
 
 a {
@@ -109,6 +118,16 @@ a {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }
 

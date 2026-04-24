@@ -9,7 +9,7 @@ function removeTooltip() {
 
 document.addEventListener('mousedown', (e) => {
   const tooltip = document.getElementById(TOOLTIP_ID);
-  if (tooltip && !tooltip.contains(e.target)) {
+  if (tooltip && !tooltip.contains(e.target) && !e.target.closest('#pait-inline-result')) {
     tooltip.remove();
   }
 });
@@ -41,16 +41,311 @@ document.addEventListener('mouseup', (e) => {
   const translateBtn = document.createElement('button');
   translateBtn.id = 'pait-btn-translate';
   translateBtn.type = 'button';
-  translateBtn.textContent = '🌐 Translate';
+  translateBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>`;
+  translateBtn.title = 'Translate';
+  translateBtn.style.padding = '6px';
+
+  const btnSummarize = document.createElement('button');
+  btnSummarize.id = 'pait-btn-summarize';
+  btnSummarize.title = 'Summarize';
+  btnSummarize.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.2 1.2L3 12l5.8 1.9a2 2 0 0 1 1.2 1.2L12 21l1.9-5.8a2 2 0 0 1 1.2-1.2L21 12l-5.8-1.9a2 2 0 0 1-1.2-1.2Z"/></svg>`;
+  Object.assign(btnSummarize.style, {
+    background: 'none',
+    border: 'none',
+    color: '#94a3b8',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    padding: '6px',
+  });
+  btnSummarize.addEventListener('mouseover', () => (btnSummarize.style.color = '#a855f7'));
+  btnSummarize.addEventListener('mouseout', () => (btnSummarize.style.color = '#94a3b8'));
 
   const saveBtn = document.createElement('button');
   saveBtn.id = 'pait-btn-save';
   saveBtn.type = 'button';
-  saveBtn.textContent = '📝 Save';
+  saveBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>`;
+  saveBtn.title = 'Save to Notebook';
+  saveBtn.style.padding = '6px';
 
   tooltip.appendChild(translateBtn);
+  tooltip.appendChild(btnSummarize);
   tooltip.appendChild(saveBtn);
   document.body.appendChild(tooltip);
+
+  const summarizeBtnEl = document.getElementById('pait-btn-summarize');
+  if (summarizeBtnEl) {
+    summarizeBtnEl.addEventListener('mousedown', (e) => e.stopPropagation());
+    summarizeBtnEl.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const oldBox = document.getElementById('pait-inline-result');
+      if (oldBox) oldBox.remove();
+
+      const resultBox = document.createElement('div');
+      resultBox.id = 'pait-inline-result';
+
+      const tooltipTop = Number.parseInt(tooltip.style.top || '0', 10) || 0;
+
+      Object.assign(resultBox.style, {
+        position: 'absolute',
+        top: `${tooltipTop + 40}px`,
+        left: tooltip.style.left,
+        backgroundColor: '#1e293b',
+        color: '#f8fafc',
+        padding: '12px',
+        borderRadius: '8px',
+        border: '1px solid #334155',
+        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
+        width: '350px',
+        resize: 'both',
+        overflow: 'auto',
+        minWidth: '300px',
+        minHeight: '150px',
+        maxWidth: '800px',
+        maxHeight: '600px',
+        zIndex: '10000',
+        fontFamily: 'sans-serif',
+        fontSize: '14px',
+        lineHeight: '1.5',
+        display: 'flex',
+        flexDirection: 'column',
+      });
+
+      resultBox.innerHTML = `
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; border-bottom: 1px solid #334155; padding-bottom: 4px;">
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+            <span style="font-size: 12px; color: #94a3b8; font-weight: bold;">✨ Summary</span>
+            <select id="pait-summary-lang" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; font-size: 12px; outline: none; padding: 2px 4px;">
+              <option value="uk" selected>Ukrainian</option>
+              <option value="en">English</option>
+              <option value="pl">Polish</option>
+              <option value="es">Spanish</option>
+              <option value="de">German</option>
+            </select>
+            <select id="pait-summary-length" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; font-size: 12px; outline: none; padding: 2px 4px;">
+              <option value="short">Short (1-2 sentences)</option>
+              <option value="medium" selected>Standard</option>
+              <option value="long">Detailed</option>
+            </select>
+          </div>
+          <button id="pait-close-inline" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px;">×</button>
+        </div>
+        <textarea id="pait-summary-content" readonly style="width: 100%; flex: 1; height: 100%; background: transparent; color: #f8fafc; border: none; resize: none; outline: none; font-size: 14px; font-family: sans-serif;">⏳ Summarizing...</textarea>
+      `;
+
+      document.body.appendChild(resultBox);
+
+      const closeBtn = document.getElementById('pait-close-inline');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+          resultBox.remove();
+        });
+      }
+
+      const setError = (err) => {
+        const contentEl = document.getElementById('pait-summary-content');
+        if (!contentEl) return;
+        contentEl.style.color = '#ef4444';
+        contentEl.value = '❌ Error: Could not summarize text.';
+        console.error('Summarize error:', err);
+      };
+
+      if (!chrome?.runtime?.sendMessage) {
+        setError('chrome.runtime.sendMessage unavailable');
+        return;
+      }
+
+      const requestSummary = () => {
+        const contentEl = document.getElementById('pait-summary-content');
+        if (contentEl) {
+          contentEl.style.color = '#f8fafc';
+          contentEl.value = '⏳ Summarizing...';
+        }
+
+        const lengthSelect = document.getElementById('pait-summary-length');
+        const length = lengthSelect?.value || 'medium';
+        const langSelect = document.getElementById('pait-summary-lang');
+        const language = langSelect?.value || 'uk';
+
+        chrome.runtime.sendMessage(
+          { action: 'SUMMARIZE_TEXT', text: selectedText, length, language },
+          (response) => {
+          const el = document.getElementById('pait-summary-content');
+          if (!el) return;
+
+          if (chrome.runtime.lastError || !response || !response.ok) {
+            setError(chrome.runtime.lastError || response?.error);
+          } else {
+            el.style.color = '#f8fafc';
+            el.value = response.data ?? '';
+          }
+        }
+        );
+      };
+
+      const bindSelect = (id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('mousedown', (ev) => ev.stopPropagation());
+        el.addEventListener('change', () => {
+          requestSummary();
+        });
+      };
+      bindSelect('pait-summary-length');
+      bindSelect('pait-summary-lang');
+
+      requestSummary();
+    });
+  }
+
+  const translateBtnEl = document.getElementById('pait-btn-translate');
+  if (translateBtnEl) {
+    translateBtnEl.addEventListener('mousedown', (e) => e.stopPropagation());
+    translateBtnEl.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Видаляємо старі результати, якщо вони є
+      const oldBox = document.getElementById('pait-inline-result');
+      if (oldBox) oldBox.remove();
+
+      // Створюємо віконце для результату
+      const resultBox = document.createElement('div');
+      resultBox.id = 'pait-inline-result';
+
+      const tooltipTop = Number.parseInt(tooltip.style.top || '0', 10) || 0;
+
+      // Стилізуємо віконце (Tailwind-like стилі через JS)
+      Object.assign(resultBox.style, {
+        position: 'absolute',
+        top: `${tooltipTop + 40}px`, // Трохи нижче тултипу
+        left: tooltip.style.left,
+        backgroundColor: '#1e293b', // slate-800
+        color: '#f8fafc', // slate-50
+        padding: '12px',
+        borderRadius: '8px',
+        border: '1px solid #334155', // slate-700
+        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
+        width: '500px',
+        resize: 'both',
+        overflow: 'auto',
+        minWidth: '300px',
+        minHeight: '150px',
+        maxWidth: '800px',
+        maxHeight: '600px',
+        zIndex: '10000',
+        fontFamily: 'sans-serif',
+        fontSize: '14px',
+        lineHeight: '1.5',
+        display: 'flex',
+        flexDirection: 'column',
+      });
+
+      resultBox.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid #334155; padding-bottom: 4px;">
+        <select id="pait-lang-select" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; font-size: 12px; outline: none; padding: 2px 4px;">
+          <option value="uk">Ukrainian</option>
+          <option value="en">English</option>
+          <option value="pl">Polish</option>
+          <option value="es">Spanish</option>
+          <option value="de">German</option>
+        </select>
+        <button id="pait-close-inline" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px;">×</button>
+      </div>
+      <div style="display: flex; gap: 8px; flex: 1; min-height: 120px;">
+        <textarea id="pait-source-editor" style="flex: 1; height: 100%; background: transparent; color: #f8fafc; border: none; resize: none; outline: none; font-size: 14px; font-family: sans-serif;"></textarea>
+        <div style="width: 1px; background-color: #334155;"></div>
+        <textarea id="pait-target-editor" readonly style="flex: 1; height: 100%; background: transparent; color: #10b981; border: none; resize: none; outline: none; font-size: 14px; font-family: sans-serif;"></textarea>
+      </div>
+    `;
+
+      document.body.appendChild(resultBox);
+
+      const sourceEditor = document.getElementById('pait-source-editor');
+      if (sourceEditor) {
+        sourceEditor.value = selectedText;
+      }
+
+      // Обробник закриття віконця
+      const closeBtn = document.getElementById('pait-close-inline');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+          resultBox.remove();
+        });
+      }
+
+      const setLoading = () => {
+        const targetEditor = document.getElementById('pait-target-editor');
+        if (!targetEditor) return;
+        targetEditor.value = '⏳ Translating...';
+      };
+
+      const showError = (err) => {
+        const targetEditor = document.getElementById('pait-target-editor');
+        if (!targetEditor) return;
+        targetEditor.style.color = '#ef4444';
+        targetEditor.value = '❌ Error: Could not translate text.';
+        console.error('Translation error:', err);
+      };
+
+      const requestTranslation = () => {
+        const langSelect = document.getElementById('pait-lang-select');
+        const targetLang = langSelect?.value || 'uk';
+
+        if (!chrome?.runtime?.sendMessage) {
+          showError('chrome.runtime.sendMessage unavailable');
+          return;
+        }
+
+        setLoading();
+
+        const src = document.getElementById('pait-source-editor');
+        const text = src?.value ?? selectedText;
+
+        chrome.runtime.sendMessage(
+          { action: 'TRANSLATE_TEXT', text, targetLang },
+          (response) => {
+            const targetEditor = document.getElementById('pait-target-editor');
+            if (!targetEditor) return;
+
+            if (chrome.runtime.lastError || !response || !response.ok) {
+              showError(chrome.runtime.lastError || response?.error);
+            } else {
+              targetEditor.style.color = '#10b981';
+              // Безпечно: рендеримо як текст, без HTML
+              targetEditor.value = response.data ?? '';
+            }
+          }
+        );
+      };
+
+      const langSelectEl = document.getElementById('pait-lang-select');
+      if (langSelectEl) {
+        langSelectEl.addEventListener('mousedown', (ev) => ev.stopPropagation());
+        langSelectEl.addEventListener('change', () => {
+          requestTranslation();
+        });
+      }
+
+      const sourceEditorEl = document.getElementById('pait-source-editor');
+      if (sourceEditorEl) {
+        sourceEditorEl.addEventListener('mousedown', (ev) => ev.stopPropagation());
+
+        let debounceTimer = null;
+        sourceEditorEl.addEventListener('input', () => {
+          setLoading();
+          if (debounceTimer) window.clearTimeout(debounceTimer);
+          debounceTimer = window.setTimeout(() => {
+            requestTranslation();
+          }, 600);
+        });
+      }
+
+      requestTranslation();
+    });
+  }
 
   const saveBtnEl = document.getElementById('pait-btn-save');
   if (saveBtnEl) {

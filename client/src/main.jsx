@@ -4,6 +4,7 @@ import { ApolloProvider } from '@apollo/client/react';
 import { HashRouter } from 'react-router-dom';
 import App from './App.jsx';
 import './index.css';
+import './App.css';
 import { apolloClient } from './apollo/client.js';
 import { AccessibilityProvider } from './context/AccessibilityContext.jsx';
 
