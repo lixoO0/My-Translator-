@@ -128,6 +128,9 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
           return;
         }
 
+        // Відправляємо сигнал в React-додаток, що історія оновилася
+        chrome.runtime.sendMessage({ action: 'HISTORY_UPDATED' }).catch(() => {});
+
         // content.js очікує строку в response.data
         sendResponse({ ok: true, data: translated });
       } catch (err) {
@@ -199,6 +202,9 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
           sendResponse({ ok: false, error: 'Empty summary result' });
           return;
         }
+
+        // Відправляємо сигнал в React-додаток, що історія оновилася
+        chrome.runtime.sendMessage({ action: 'HISTORY_UPDATED' }).catch(() => {});
 
         sendResponse({ ok: true, data: summarized });
       } catch (err) {

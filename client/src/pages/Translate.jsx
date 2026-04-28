@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { TRANSLATE_TEXT } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
@@ -62,14 +62,14 @@ export const Translate = () => {
   const [sourceLang, setSourceLang] = useState('auto');
   const [targetLang, setTargetLang] = useState('English');
   const [translatedText, setTranslatedText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  const [translate, { loading, error }] = useMutation(TRANSLATE_TEXT, {
-    onCompleted: (data) => {
-      setTranslatedText(data.translate.outputResult);
-    },
-  });
+  const translationCache = useRef(new Map());
+  const activeRequestId = useRef(0);
+
+  const [translate] = useMutation(TRANSLATE_TEXT);
 
   useEffect(() => {
     const savedSession = localStorage.getItem('restoreSession');
@@ -105,29 +105,96 @@ export const Translate = () => {
     return () => synth.removeEventListener('voiceschanged', onVoices);
   }, []);
 
-  if (!isAuthenticated) {
-    return null;
-  }
+  // Live translation with cache + debounce (prevents server overload while typing).
+  useEffect(() => {
+    const trimmedText = text.trim();
 
-  const handleTranslate = async (e) => {
-    e.preventDefault();
-    
-    if (!text.trim()) {
+    if (!trimmedText) {
+      activeRequestId.current += 1; // invalidate any in-flight result
+      setIsLoading(false);
+      setTranslatedText('');
       return;
     }
 
-    try {
-      await translate({
-        variables: {
-          text: text.trim(),
-          sourceLang: sourceLang === 'auto' ? null : sourceLang,
-          targetLang,
-        },
-      });
-    } catch (err) {
-      console.error('Translation error:', err);
+    // Unique cache key: text + source + target language
+    const cacheKey = `${trimmedText}_${sourceLang}_${targetLang}`;
+
+    // Instant hit from cache (especially useful when user deletes/retypes)
+    if (translationCache.current.has(cacheKey)) {
+      setIsLoading(false);
+      setTranslatedText(translationCache.current.get(cacheKey));
+      return;
     }
-  };
+
+    setIsLoading(true);
+    const requestId = (activeRequestId.current += 1);
+
+    const timer = setTimeout(async () => {
+      try {
+        const { data } = await translate({
+          variables: {
+            text: trimmedText,
+            sourceLang: sourceLang === 'auto' ? null : sourceLang,
+            targetLang,
+          },
+        });
+
+        const result = data?.translate?.outputResult ?? '';
+
+        // Ignore stale responses
+        if (requestId !== activeRequestId.current) return;
+
+        translationCache.current.set(cacheKey, result);
+        setTranslatedText(result);
+      } catch (translateError) {
+        console.error('Translation Error:', translateError);
+        if (requestId !== activeRequestId.current) return;
+        const errorString = String(
+          translateError?.toString?.() ??
+            translateError?.message ??
+            translateError?.networkError?.message ??
+            translateError
+        ).toLowerCase();
+
+        const status =
+          translateError?.networkError?.statusCode ??
+          translateError?.networkError?.status ??
+          translateError?.networkError?.response?.status;
+
+        // Never show raw server error strings in UI (can break layout).
+        if (
+          status === 429 ||
+          errorString.includes('429') ||
+          errorString.includes('quota exceeded')
+        ) {
+          setTranslatedText('⚠️ Мережева затримка. Перекладаю...');
+          return;
+        }
+
+        if (
+          status === 503 ||
+          errorString.includes('503') ||
+          errorString.includes('service unavailable') ||
+          errorString.includes('high demand')
+        ) {
+          setTranslatedText('⏳ Сервери Google зараз перевантажені. Секундочку...');
+          return;
+        }
+
+        setTranslatedText('❌ Помилка перекладу. Спробуйте ще раз.');
+      } finally {
+        if (requestId === activeRequestId.current) {
+          setIsLoading(false);
+        }
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [text, sourceLang, targetLang, translate]);
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const handleSwapLanguages = () => {
     if (sourceLang === 'auto') {
@@ -157,10 +224,7 @@ export const Translate = () => {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden break-words p-4">
-      <form
-        onSubmit={handleTranslate}
-        className="flex min-h-0 min-w-0 flex-1 flex-col gap-4"
-      >
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
         <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-lg">
           <div className="shrink-0 border-b border-slate-800 px-3 py-2">
             <Label htmlFor="input-text" className="text-xs font-medium text-slate-400">
@@ -244,14 +308,6 @@ export const Translate = () => {
               </SelectContent>
             </Select>
           </div>
-
-          <button
-            type="submit"
-            disabled={loading || !text.trim()}
-            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 transition-all hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading ? '…' : 'Translate'}
-          </button>
         </div>
 
         <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-lg">
@@ -264,10 +320,12 @@ export const Translate = () => {
             <div className="relative flex min-h-0 flex-1 flex-col">
               <Textarea
                 id="output-text"
-                value={translatedText}
+                value={isLoading ? '⏳ Translating...' : translatedText}
                 readOnly
                 placeholder="Translation…"
-                className={`${textareaClass} cursor-default text-slate-200`}
+                className={`${textareaClass} cursor-default ${
+                  isLoading ? 'text-slate-500 animate-pulse' : 'text-slate-200'
+                }`}
               />
               <button
                 type="button"
@@ -275,7 +333,7 @@ export const Translate = () => {
                 className="absolute bottom-3 right-3 z-10 rounded-full bg-slate-800/80 p-2 text-slate-400 shadow-md backdrop-blur-sm transition-all hover:bg-slate-700 hover:text-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
                 title="Listen to text"
                 aria-label="Listen to translated text"
-                disabled={!translatedText.trim()}
+                disabled={isLoading || !translatedText.trim()}
               >
                 <Volume2 className="h-5 w-5" />
               </button>
@@ -283,10 +341,7 @@ export const Translate = () => {
           </div>
         </section>
 
-        {error && (
-          <p className="shrink-0 text-xs leading-snug text-red-400 break-words">{error.message}</p>
-        )}
-      </form>
+      </div>
     </div>
   );
 };
