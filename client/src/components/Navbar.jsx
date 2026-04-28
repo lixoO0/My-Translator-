@@ -1,7 +1,5 @@
-import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import HistoryModal from './HistoryModal';
 import AccessibilityMenu from './AccessibilityMenu';
 
 const tabBase =
@@ -12,9 +10,8 @@ const tabInactive = 'text-slate-400 hover:bg-slate-800 hover:text-slate-200';
 const pillButton =
   'shrink-0 rounded-full border border-slate-600/80 bg-slate-800/60 px-3 py-1.5 text-sm font-medium text-slate-200 transition-all duration-200 hover:border-slate-500 hover:bg-slate-800';
 
-export const Navbar = () => {
+export const Navbar = ({ onOpenHistory }) => {
   const { isAuthenticated, user, logout } = useAuth();
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   return (
     <header className="shrink-0 border-b border-slate-800 bg-slate-950">
@@ -67,7 +64,7 @@ export const Navbar = () => {
               </NavLink>
               <button
                 type="button"
-                onClick={() => setIsHistoryOpen(true)}
+                onClick={() => onOpenHistory?.()}
                 className={pillButton}
                 aria-label="View history"
               >
@@ -86,10 +83,6 @@ export const Navbar = () => {
           )}
         </nav>
       </div>
-
-      {isAuthenticated && (
-        <HistoryModal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} />
-      )}
     </header>
   );
 };

@@ -70,7 +70,9 @@ export const Summarize = () => {
       return;
     }
 
-    const cacheKey = `${trimmedText}_${summaryLength}`;
+    // Include language in cache key to avoid returning summaries in the wrong language
+    // when user switches the language selector.
+    const cacheKey = `${trimmedText}_${summaryLength}_${summaryLang}`;
     if (summaryCache.current.has(cacheKey)) {
       setIsLoading(false);
       setSummarizedText(summaryCache.current.get(cacheKey));
@@ -85,7 +87,7 @@ export const Summarize = () => {
         const { data } = await summarize({
           variables: {
             text: trimmedText,
-            language: summaryLang,
+            language: (summaryLang ?? '').toString().trim() || 'uk',
             length: summaryLength,
           },
         });

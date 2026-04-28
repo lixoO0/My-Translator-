@@ -1,12 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import HistoryModal from '../components/HistoryModal';
 
 const History = () => {
-  // Автоматично відкриваємо модалку при відвідуванні сторінки
-  const [isHistoryOpen, setIsHistoryOpen] = useState(true);
   const [refreshTick, setRefreshTick] = useState(0);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const handleMessage = (message) => {
@@ -24,16 +20,8 @@ const History = () => {
   }, []);
 
   return (
-    <div className="flex flex-1 flex-col overflow-y-auto bg-slate-950 p-4 space-y-4">
-      <HistoryModal
-        isOpen={isHistoryOpen}
-        variant="page"
-        refreshTick={refreshTick}
-        onClose={() => {
-          setIsHistoryOpen(false);
-          navigate('/translate');
-        }}
-      />
+    <div className="flex flex-1 flex-col w-full h-full overflow-y-auto bg-slate-950 p-4">
+      <HistoryModal isOpen onClose={() => {}} refreshTick={refreshTick} />
     </div>
   );
 };

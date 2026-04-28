@@ -87,19 +87,50 @@ export const summarizeText = async (
   length: string = 'medium'
 ): Promise<string> => {
   try {
+    const language = (targetLanguage ?? '').toString().trim();
+    console.log('Summarize requested in language:', language);
+
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
 
     // Формуємо промпт
     let prompt: string;
+    const languageMap: Record<string, string> = {
+      uk: 'Ukrainian',
+      en: 'English',
+      es: 'Spanish',
+      fr: 'French',
+      de: 'German',
+      pl: 'Polish',
+      it: 'Italian',
+      pt: 'Portuguese',
+      tr: 'Turkish',
+      ar: 'Arabic',
+      ja: 'Japanese',
+      ko: 'Korean',
+      zh: 'Chinese',
+    };
+
+    // If language is mapped, use full name; otherwise keep as-is.
+    const fullLanguageName = language
+      ? languageMap[language.toLowerCase()] || language
+      : 'English';
+
+    const langPrompt = `You MUST output the summary STRICTLY in ${fullLanguageName}. NO EXCEPTIONS.`;
 
     if (length === 'short') {
-      prompt = `Provide a very brief summary in ${targetLanguage} in 1-2 sentences max.
+      prompt = `You are a professional summarizer.
+${langPrompt}
+Provide a very brief summary in 1-2 sentences max.
 Text to summarize: ${text}`;
     } else if (length === 'long') {
-      prompt = `Provide a detailed, comprehensive summary in ${targetLanguage} with key points.
+      prompt = `You are a professional summarizer.
+${langPrompt}
+Provide a detailed, comprehensive summary with key points.
 Text to summarize: ${text}`;
     } else {
-      prompt = `Provide a standard, concise summary in ${targetLanguage}.
+      prompt = `You are a professional summarizer.
+${langPrompt}
+Provide a standard, concise summary.
 Text to summarize: ${text}`;
     }
 

@@ -1,15 +1,14 @@
 import { useEffect } from 'react';
 import { useQuery, useMutation } from '@apollo/client/react';
-import { useNavigate } from 'react-router-dom';
 import { GET_HISTORY } from '../graphql/queries';
 import { DELETE_HISTORY_ITEM } from '../graphql/mutations';
-import { Copy, Trash2, Volume2 } from 'lucide-react';
+import { Copy, Trash2, Volume2, X } from 'lucide-react';
 import { speakText, warmupSpeechSynthesis } from '@/lib/speakText';
 
-export const HistoryModal = ({ isOpen, onClose, variant = 'modal', refreshTick = 0 }) => {
-  const navigate = useNavigate();
+export const HistoryModal = ({ isOpen = false, onClose, refreshTick = 0 }) => {
+  if (!isOpen) return null;
+
   const { data, loading, error, refetch } = useQuery(GET_HISTORY, {
-    skip: !isOpen, // Не виконуємо запит, якщо модалка закрита
     fetchPolicy: 'network-only', // Завжди отримуємо свіжі дані
   });
   const [deleteItem] = useMutation(DELETE_HISTORY_ITEM, {
@@ -33,28 +32,9 @@ export const HistoryModal = ({ isOpen, onClose, variant = 'modal', refreshTick =
   }, []);
 
   useEffect(() => {
-    if (!isOpen) return;
     if (!refreshTick) return;
     refetch?.().catch(() => {});
-  }, [refreshTick, isOpen, refetch]);
-
-  // Блокуємо прокрутку body, коли modal відкритий
-  useEffect(() => {
-    if (variant !== 'modal') return;
-
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    
-    // Cleanup: повертаємо прокрутку при розмонтуванні
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen, variant]);
-
-  if (!isOpen) return null;
+  }, [refreshTick, refetch]);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -107,13 +87,6 @@ export const HistoryModal = ({ isOpen, onClose, variant = 'modal', refreshTick =
     };
 
     localStorage.setItem('restoreSession', JSON.stringify(dataToRestore));
-    onClose();
-
-    if (item.actionType === 'SUMMARIZE') {
-      navigate('/summarize');
-    } else {
-      navigate('/translate');
-    }
   };
 
   const handleDelete = async (itemId) => {
@@ -130,22 +103,22 @@ export const HistoryModal = ({ isOpen, onClose, variant = 'modal', refreshTick =
   const bodyContent = (
     <div className="space-y-4">
       {loading && (
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-slate-400 animate-pulse">
-          Loading history…
+        <div className="flex items-center justify-center min-h-[40vh] text-slate-500 animate-pulse">
+          Loading history...
         </div>
       )}
 
       {error && (
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-red-400">
-          Error: {error.message}
+        <div className="flex items-center justify-center min-h-[40vh] text-slate-500">
+          Failed to load history. Please try again.
         </div>
       )}
 
       {!loading && !error && data && (
         <>
           {data.history.length === 0 ? (
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-slate-400">
-              No history yet. Start translating/summarizing to see it here.
+            <div className="flex items-center justify-center min-h-[40vh] text-slate-500">
+              No history yet.
             </div>
           ) : (
             <div className="space-y-4">
@@ -183,15 +156,6 @@ export const HistoryModal = ({ isOpen, onClose, variant = 'modal', refreshTick =
                     </div>
 
                     <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-slate-800/50">
-                      <button
-                        type="button"
-                        onClick={() => handleContinue(item)}
-                        className="px-3 py-1.5 rounded-md bg-slate-800/60 text-slate-200 text-xs font-semibold hover:bg-slate-800 transition-colors"
-                        title="Open / Continue"
-                      >
-                        Open
-                      </button>
-
                       <button
                         type="button"
                         onClick={() => copyToClipboard(item.outputResult)}
@@ -233,51 +197,22 @@ export const HistoryModal = ({ isOpen, onClose, variant = 'modal', refreshTick =
     </div>
   );
 
-  if (variant === 'page') {
-    return (
-      <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 shadow-lg">
-          <h2 className="text-slate-200 font-semibold">History</h2>
-          <button
-            type="button"
-            className="p-1.5 text-slate-500 hover:text-emerald-400 hover:bg-slate-800 rounded-md transition-colors"
-            onClick={onClose}
-            aria-label="Close"
-            title="Close"
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="flex-1 min-h-0 overflow-y-auto pt-4">{bodyContent}</div>
-      </div>
-    );
-  }
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-3xl max-h-[85vh] overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between gap-3 border-b border-slate-800 bg-slate-900 px-4 py-3">
-          <h2 className="text-slate-200 font-semibold">Translation History</h2>
-          <button
-            type="button"
-            className="p-1.5 text-slate-500 hover:text-emerald-400 hover:bg-slate-800 rounded-md transition-colors"
-            onClick={onClose}
-            aria-label="Close"
-            title="Close"
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="p-4 overflow-y-auto max-h-[calc(85vh-3.25rem)]">{bodyContent}</div>
+    <div className="absolute inset-0 z-50 bg-slate-950 flex flex-col p-4 overflow-y-auto">
+      <div className="shrink-0 flex items-center justify-between gap-3 pb-4">
+        <h2 className="text-slate-200 font-semibold">History</h2>
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-2 text-slate-500 hover:text-emerald-400 hover:bg-slate-900 rounded-md transition-colors"
+          aria-label="Close history"
+          title="Close"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
+
+      {bodyContent}
     </div>
   );
 };
