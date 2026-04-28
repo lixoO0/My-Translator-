@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { SUMMARIZE_TEXT } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
@@ -18,14 +18,14 @@ export const Summarize = () => {
   const [summarizedText, setSummarizedText] = useState('');
   const [summaryLang, setSummaryLang] = useState('uk');
   const [summaryLength, setSummaryLength] = useState('short');
+  const [isLoading, setIsLoading] = useState(false);
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  const [summarize, { loading, error }] = useMutation(SUMMARIZE_TEXT, {
-    onCompleted: (data) => {
-      setSummarizedText(data.summarize.outputResult);
-    },
-  });
+  const summaryCache = useRef(new Map());
+  const activeRequestId = useRef(0);
+
+  const [summarize] = useMutation(SUMMARIZE_TEXT);
 
   useEffect(() => {
     const savedSession = localStorage.getItem('restoreSession');
@@ -59,29 +59,59 @@ export const Summarize = () => {
     return () => synth.removeEventListener('voiceschanged', onVoices);
   }, []);
 
-  if (!isAuthenticated) {
-    return null;
-  }
+  // Live summarize with cache + debounce.
+  useEffect(() => {
+    const trimmedText = text.trim();
 
-  const handleSummarize = async (e) => {
-    e.preventDefault();
-    
-    if (!text.trim()) {
+    if (!trimmedText) {
+      activeRequestId.current += 1;
+      setIsLoading(false);
+      setSummarizedText('');
       return;
     }
 
-    try {
-      await summarize({
-        variables: {
-          text: text.trim(),
-          language: summaryLang,
-          length: summaryLength,
-        },
-      });
-    } catch (err) {
-      console.error('Summarization error:', err);
+    const cacheKey = `${trimmedText}_${summaryLength}`;
+    if (summaryCache.current.has(cacheKey)) {
+      setIsLoading(false);
+      setSummarizedText(summaryCache.current.get(cacheKey));
+      return;
     }
-  };
+
+    setIsLoading(true);
+    const requestId = (activeRequestId.current += 1);
+
+    const timer = setTimeout(async () => {
+      try {
+        const { data } = await summarize({
+          variables: {
+            text: trimmedText,
+            language: summaryLang,
+            length: summaryLength,
+          },
+        });
+
+        const result = data?.summarize?.outputResult ?? '';
+        if (requestId !== activeRequestId.current) return;
+
+        summaryCache.current.set(cacheKey, result);
+        setSummarizedText(result);
+      } catch (summarizeError) {
+        console.error('Summarization Error:', summarizeError);
+        if (requestId !== activeRequestId.current) return;
+        setSummarizedText('❌ Помилка сумаризації. Спробуйте ще раз.');
+      } finally {
+        if (requestId === activeRequestId.current) {
+          setIsLoading(false);
+        }
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [text, summaryLength, summaryLang, summarize]);
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const textareaClass =
     'min-h-0 flex-1 w-full resize-none rounded-b-xl border-0 bg-slate-950/50 p-4 pb-12 text-sm text-slate-200 shadow-inner outline-none ring-0 placeholder:text-slate-500 focus-visible:ring-0 break-words overflow-x-hidden overflow-y-auto';
@@ -90,10 +120,7 @@ export const Summarize = () => {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden break-words p-4">
-      <form
-        onSubmit={handleSummarize}
-        className="flex min-h-0 min-w-0 flex-1 flex-col gap-4"
-      >
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
         <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-lg">
           <div className="shrink-0 border-b border-slate-800 px-3 py-2">
             <Label htmlFor="input-text" className="text-xs font-medium text-slate-400">
@@ -149,13 +176,6 @@ export const Summarize = () => {
             </select>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading || !text.trim()}
-            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 transition-all hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading ? '…' : 'Summarize'}
-          </button>
         </div>
 
         <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-lg">
@@ -168,10 +188,12 @@ export const Summarize = () => {
             <div className="relative flex min-h-0 flex-1 flex-col">
               <Textarea
                 id="output-text"
-                value={summarizedText}
+                value={isLoading ? '⏳ Summarizing...' : summarizedText}
                 readOnly
                 placeholder="Summary…"
-                className={`${textareaClass} cursor-default text-slate-200`}
+                className={`${textareaClass} cursor-default ${
+                  isLoading ? 'text-slate-500 animate-pulse' : 'text-slate-200'
+                }`}
               />
               <button
                 type="button"
@@ -179,18 +201,14 @@ export const Summarize = () => {
                 className="absolute bottom-3 right-3 z-10 rounded-full bg-slate-800/80 p-2 text-slate-400 shadow-md backdrop-blur-sm transition-all hover:bg-slate-700 hover:text-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
                 title="Listen to text"
                 aria-label="Listen to summary"
-                disabled={!summarizedText.trim()}
+                disabled={isLoading || !summarizedText.trim()}
               >
                 <Volume2 className="h-5 w-5" />
               </button>
             </div>
           </div>
         </section>
-
-        {error && (
-          <p className="shrink-0 text-xs leading-snug text-red-400 break-words">{error.message}</p>
-        )}
-      </form>
+      </div>
     </div>
   );
 };

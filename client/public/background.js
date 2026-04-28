@@ -60,6 +60,9 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
           return;
         }
 
+        // Відправляємо сигнал в React-додаток, що нотатник оновився
+        chrome.runtime.sendMessage({ action: 'NOTEBOOK_UPDATED' }).catch(() => {});
+
         sendResponse({ ok: true, data: data?.data });
       } catch (err) {
         sendResponse({ ok: false, error: err?.message || 'Unknown error' });

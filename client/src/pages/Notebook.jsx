@@ -31,7 +31,7 @@ export const Notebook = () => {
     warmupSpeechSynthesis();
   }, []);
 
-  const { loading, error, data } = useQuery(GET_NOTES, {
+  const { loading, error, data, refetch } = useQuery(GET_NOTES, {
     fetchPolicy: 'cache-and-network',
     skip: !isAuthenticated,
   });
@@ -52,6 +52,21 @@ export const Notebook = () => {
       navigate('/login');
     }
   }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    const handleMessage = (message) => {
+      if (message?.action === 'NOTEBOOK_UPDATED') {
+        refetch?.().catch(() => {});
+      }
+    };
+
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+      chrome.runtime.onMessage.addListener(handleMessage);
+      return () => chrome.runtime.onMessage.removeListener(handleMessage);
+    }
+
+    return undefined;
+  }, [refetch]);
 
   if (!isAuthenticated) {
     return null;
