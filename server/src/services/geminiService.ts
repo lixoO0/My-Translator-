@@ -13,8 +13,7 @@ const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 export const translateText = async (text: string, targetLang: string, sourceLang?: string): Promise<string> => {
   try {
-    // Use a stable default model for production workloads.
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
 
     // Формуємо промпт
     let prompt: string;
@@ -88,8 +87,7 @@ export const summarizeText = async (
   length: string = 'medium'
 ): Promise<string> => {
   try {
-    // Use a stable default model for production workloads.
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
 
     // Формуємо промпт
     let prompt: string;
