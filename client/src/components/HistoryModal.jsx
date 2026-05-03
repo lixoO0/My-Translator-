@@ -103,13 +103,13 @@ export const HistoryModal = ({ isOpen = false, onClose, refreshTick = 0 }) => {
   const bodyContent = (
     <div className="space-y-4">
       {loading && (
-        <div className="flex items-center justify-center min-h-[40vh] text-slate-500 animate-pulse">
+        <div className="flex min-h-[40vh] items-center justify-center text-slate-500 animate-pulse">
           Loading history...
         </div>
       )}
 
       {error && (
-        <div className="flex items-center justify-center min-h-[40vh] text-slate-500">
+        <div className="flex min-h-[40vh] items-center justify-center text-slate-500">
           Failed to load history. Please try again.
         </div>
       )}
@@ -117,7 +117,7 @@ export const HistoryModal = ({ isOpen = false, onClose, refreshTick = 0 }) => {
       {!loading && !error && data && (
         <>
           {data.history.length === 0 ? (
-            <div className="flex items-center justify-center min-h-[40vh] text-slate-500">
+            <div className="flex min-h-[40vh] items-center justify-center text-slate-500">
               No history yet.
             </div>
           ) : (
@@ -130,15 +130,15 @@ export const HistoryModal = ({ isOpen = false, onClose, refreshTick = 0 }) => {
                 return (
                   <div
                     key={item.id}
-                    className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-200 flex flex-col gap-2"
+                    className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:shadow-lg dark:hover:shadow-xl"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex flex-wrap items-center gap-2 min-w-0">
-                        <span className="inline-block px-2 py-1 bg-slate-800 text-slate-300 rounded-md text-xs font-semibold">
+                        <span className="inline-block rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                           {item.actionType}
                         </span>
                         {badgeText ? (
-                          <span className="inline-block px-2 py-1 bg-slate-800 text-slate-300 rounded-md text-xs font-semibold">
+                          <span className="inline-block rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                             {badgeText}
                           </span>
                         ) : null}
@@ -147,19 +147,19 @@ export const HistoryModal = ({ isOpen = false, onClose, refreshTick = 0 }) => {
                       <div className="text-xs text-slate-500 shrink-0">{dateLabel}</div>
                     </div>
 
-                    <div className="text-slate-400 text-sm whitespace-pre-wrap break-words">
+                    <div className="whitespace-pre-wrap break-words text-sm text-slate-600 dark:text-slate-400">
                       {truncateText(item.inputContent, 220)}
                     </div>
 
-                    <div className="text-slate-200 text-base font-medium whitespace-pre-wrap break-words">
+                    <div className="whitespace-pre-wrap break-words text-base font-medium text-slate-900 dark:text-slate-200">
                       {truncateText(item.outputResult, 320)}
                     </div>
 
-                    <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-slate-800/50">
+                    <div className="mt-2 flex justify-end gap-2 border-t border-slate-200/80 pt-2 dark:border-slate-800/50">
                       <button
                         type="button"
                         onClick={() => copyToClipboard(item.outputResult)}
-                        className="p-1.5 text-slate-500 hover:text-emerald-400 hover:bg-slate-800 rounded-md transition-colors"
+                        className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
                         title="Copy"
                         aria-label="Copy"
                       >
@@ -169,7 +169,7 @@ export const HistoryModal = ({ isOpen = false, onClose, refreshTick = 0 }) => {
                       <button
                         type="button"
                         onClick={() => speakText(item.outputResult, outputLang)}
-                        className="p-1.5 text-slate-500 hover:text-emerald-400 hover:bg-slate-800 rounded-md transition-colors"
+                        className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
                         title="Speak"
                         aria-label="Speak"
                         disabled={!item?.outputResult?.trim()}
@@ -180,7 +180,7 @@ export const HistoryModal = ({ isOpen = false, onClose, refreshTick = 0 }) => {
                       <button
                         type="button"
                         onClick={() => handleDelete(item.id)}
-                        className="p-1.5 text-slate-500 hover:text-emerald-400 hover:bg-slate-800 rounded-md transition-colors"
+                        className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
                         title="Delete"
                         aria-label="Delete"
                       >
@@ -198,13 +198,13 @@ export const HistoryModal = ({ isOpen = false, onClose, refreshTick = 0 }) => {
   );
 
   return (
-    <div className="absolute inset-0 z-50 bg-slate-950 flex flex-col p-4 overflow-y-auto">
-      <div className="shrink-0 flex items-center justify-between gap-3 pb-4">
-        <h2 className="text-slate-200 font-semibold">History</h2>
+    <div className="absolute inset-0 z-50 flex flex-col overflow-y-auto bg-slate-50 p-4 dark:bg-slate-950">
+      <div className="flex shrink-0 items-center justify-between gap-3 pb-4">
+        <h2 className="font-semibold text-slate-900 dark:text-slate-200">History</h2>
         <button
           type="button"
           onClick={onClose}
-          className="p-2 text-slate-500 hover:text-emerald-400 hover:bg-slate-900 rounded-md transition-colors"
+          className="rounded-md p-2 text-slate-500 transition-colors hover:bg-slate-200 hover:text-emerald-600 dark:hover:bg-slate-900 dark:hover:text-emerald-400"
           aria-label="Close history"
           title="Close"
         >

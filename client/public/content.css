@@ -3,6 +3,8 @@
   position: absolute;
   z-index: 2147483647;
   display: flex;
+  flex-direction: row;
+  align-items: center;
   gap: 8px;
   background-color: #1e293b;
   padding: 6px 10px;
@@ -10,6 +12,12 @@
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   border: 1px solid #334155;
   pointer-events: auto;
+}
+
+/* Ручка перетягування для великого вікна результату (Translate / Summarize) */
+#pait-inline-result .pait-inline-toolbar {
+  cursor: grab;
+  flex-shrink: 0;
 }
 
 #pait-magic-tooltip button {
@@ -31,3 +39,71 @@
   background-color: #334155;
 }
 
+#pait-magic-tooltip #pait-btn-summarize {
+  color: #94a3b8;
+}
+
+#pait-magic-tooltip #pait-btn-summarize:hover {
+  color: #a855f7;
+}
+
+/* Light theme — синхронізовано з React (chrome.storage.local.pait_theme) */
+#pait-magic-tooltip.pait-light {
+  background-color: #ffffff;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.08);
+}
+
+#pait-magic-tooltip.pait-light button {
+  color: #0f172a;
+}
+
+#pait-magic-tooltip.pait-light button:hover {
+  background-color: #f1f5f9;
+}
+
+#pait-magic-tooltip.pait-light #pait-btn-summarize {
+  color: #64748b;
+}
+
+#pait-magic-tooltip.pait-light #pait-btn-summarize:hover {
+  color: #9333ea;
+}
+
+#pait-inline-result.pait-light {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.12) !important;
+}
+
+#pait-inline-result.pait-light .pait-inline-toolbar {
+  border-bottom-color: #e2e8f0 !important;
+}
+
+#pait-inline-result.pait-light .pait-inline-label {
+  color: #64748b !important;
+}
+
+#pait-inline-result.pait-light .pait-inline-select {
+  background: #f8fafc !important;
+  color: #334155 !important;
+  border-color: #e2e8f0 !important;
+}
+
+#pait-inline-result.pait-light .pait-inline-textarea {
+  color: #0f172a !important;
+}
+
+#pait-inline-result.pait-light .pait-inline-target {
+  color: #059669 !important;
+}
+
+#pait-inline-result.pait-light .pait-inline-divider {
+  background-color: #e2e8f0 !important;
+}
+
+#pait-inline-result.pait-light .pait-inline-close {
+  color: #64748b !important;
+}

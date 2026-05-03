@@ -27,5 +27,6 @@ test('renders the home heading', async () => {
     </MockedProvider>
   );
 
-  expect(await screen.findByText(/Personal AI Translator/i)).toBeInTheDocument();
+  expect(await screen.findByText(/^PAIT$/i)).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /translate/i })).toBeInTheDocument();
 });

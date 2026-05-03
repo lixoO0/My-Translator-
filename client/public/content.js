@@ -1,10 +1,101 @@
 console.log('PAIT Content Script Loaded!');
 
 const TOOLTIP_ID = 'pait-magic-tooltip';
+const INLINE_RESULT_ID = 'pait-inline-result';
+
+let isDragging = false;
+let offsetX = 0;
+let offsetY = 0;
+let paitTooltipDragCleanup = null;
+
+function applyPaitThemeToRoots(isLight) {
+  const tooltip = document.getElementById(TOOLTIP_ID);
+  const inline = document.getElementById(INLINE_RESULT_ID);
+  for (const el of [tooltip, inline]) {
+    if (!el) continue;
+    if (isLight) el.classList.add('pait-light');
+    else el.classList.remove('pait-light');
+  }
+}
+
+function syncPaitThemeFromStorage() {
+  if (typeof chrome === 'undefined' || !chrome.storage?.local?.get) return;
+  chrome.storage.local.get(['pait_theme'], (result) => {
+    applyPaitThemeToRoots(result?.pait_theme === 'light');
+  });
+}
+
+if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
+  chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace !== 'local' || !Object.prototype.hasOwnProperty.call(changes, 'pait_theme')) {
+      return;
+    }
+    const next = changes.pait_theme.newValue;
+    applyPaitThemeToRoots(next === 'light');
+  });
+}
 
 function removeTooltip() {
   const existing = document.getElementById(TOOLTIP_ID);
   if (existing) existing.remove();
+}
+
+function tearDownInlineDrag() {
+  if (paitTooltipDragCleanup) {
+    paitTooltipDragCleanup();
+    paitTooltipDragCleanup = null;
+  }
+}
+
+/** handleEl — «ручка» (хедер панелі); container — #pait-inline-result (рухається весь блок). */
+function initTooltipDrag(handleEl, container) {
+  tearDownInlineDrag();
+
+  let onMove;
+  let onUp;
+
+  const detach = () => {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    isDragging = false;
+    handleEl.style.cursor = 'grab';
+    if (paitTooltipDragCleanup === detach) {
+      paitTooltipDragCleanup = null;
+    }
+  };
+
+  onMove = (e) => {
+    if (!isDragging) return;
+    container.style.left = `${e.clientX - offsetX + window.scrollX}px`;
+    container.style.top = `${e.clientY - offsetY + window.scrollY}px`;
+    container.style.right = 'auto';
+    container.style.bottom = 'auto';
+  };
+
+  onUp = () => {
+    detach();
+  };
+
+  handleEl.addEventListener(
+    'mousedown',
+    (e) => {
+      if (e.button !== 0) return;
+      if (e.target.closest('select')) return;
+      if (e.target.closest('.pait-inline-close')) return;
+      const rect = container.getBoundingClientRect();
+      offsetX = e.clientX - rect.left;
+      offsetY = e.clientY - rect.top;
+      isDragging = true;
+      handleEl.style.cursor = 'grabbing';
+      container.style.right = 'auto';
+      container.style.bottom = 'auto';
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    },
+    true
+  );
+
+  paitTooltipDragCleanup = detach;
 }
 
 document.addEventListener('mousedown', (e) => {
@@ -52,14 +143,11 @@ document.addEventListener('mouseup', (e) => {
   Object.assign(btnSummarize.style, {
     background: 'none',
     border: 'none',
-    color: '#94a3b8',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     padding: '6px',
   });
-  btnSummarize.addEventListener('mouseover', () => (btnSummarize.style.color = '#a855f7'));
-  btnSummarize.addEventListener('mouseout', () => (btnSummarize.style.color = '#94a3b8'));
 
   const saveBtn = document.createElement('button');
   saveBtn.id = 'pait-btn-save';
@@ -72,6 +160,7 @@ document.addEventListener('mouseup', (e) => {
   tooltip.appendChild(btnSummarize);
   tooltip.appendChild(saveBtn);
   document.body.appendChild(tooltip);
+  syncPaitThemeFromStorage();
 
   const summarizeBtnEl = document.getElementById('pait-btn-summarize');
   if (summarizeBtnEl) {
@@ -81,7 +170,10 @@ document.addEventListener('mouseup', (e) => {
       e.stopPropagation();
 
       const oldBox = document.getElementById('pait-inline-result');
-      if (oldBox) oldBox.remove();
+      if (oldBox) {
+        tearDownInlineDrag();
+        oldBox.remove();
+      }
 
       const resultBox = document.createElement('div');
       resultBox.id = 'pait-inline-result';
@@ -92,6 +184,8 @@ document.addEventListener('mouseup', (e) => {
         position: 'absolute',
         top: `${tooltipTop + 40}px`,
         left: tooltip.style.left,
+        right: 'auto',
+        bottom: 'auto',
         backgroundColor: '#1e293b',
         color: '#f8fafc',
         padding: '12px',
@@ -114,32 +208,39 @@ document.addEventListener('mouseup', (e) => {
       });
 
       resultBox.innerHTML = `
-        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; border-bottom: 1px solid #334155; padding-bottom: 4px;">
+        <div class="pait-inline-toolbar" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; border-bottom: 1px solid #334155; padding-bottom: 4px;">
           <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-            <span style="font-size: 12px; color: #94a3b8; font-weight: bold;">✨ Summary</span>
-            <select id="pait-summary-lang" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; font-size: 12px; outline: none; padding: 2px 4px;">
+            <span class="pait-inline-label" style="font-size: 12px; color: #94a3b8; font-weight: bold;">✨ Summary</span>
+            <select id="pait-summary-lang" class="pait-inline-select" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; font-size: 12px; outline: none; padding: 2px 4px;">
               <option value="uk" selected>Ukrainian</option>
               <option value="en">English</option>
               <option value="pl">Polish</option>
               <option value="es">Spanish</option>
               <option value="de">German</option>
             </select>
-            <select id="pait-summary-length" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; font-size: 12px; outline: none; padding: 2px 4px;">
+            <select id="pait-summary-length" class="pait-inline-select" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; font-size: 12px; outline: none; padding: 2px 4px;">
               <option value="short">Short (1-2 sentences)</option>
               <option value="medium" selected>Standard</option>
               <option value="long">Detailed</option>
             </select>
           </div>
-          <button id="pait-close-inline" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px;">×</button>
+          <button id="pait-close-inline" class="pait-inline-close" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px;">×</button>
         </div>
-        <textarea id="pait-summary-content" readonly style="width: 100%; flex: 1; height: 100%; background: transparent; color: #f8fafc; border: none; resize: none; outline: none; font-size: 14px; font-family: sans-serif;">⏳ Summarizing...</textarea>
+        <textarea id="pait-summary-content" class="pait-inline-textarea" readonly style="width: 100%; flex: 1; height: 100%; background: transparent; color: #f8fafc; border: none; resize: none; outline: none; font-size: 14px; font-family: sans-serif;">⏳ Summarizing...</textarea>
       `;
 
       document.body.appendChild(resultBox);
+      syncPaitThemeFromStorage();
+
+      const headerEl = resultBox.querySelector('.pait-inline-toolbar');
+      if (headerEl) {
+        initTooltipDrag(headerEl, resultBox);
+      }
 
       const closeBtn = document.getElementById('pait-close-inline');
       if (closeBtn) {
         closeBtn.addEventListener('click', () => {
+          tearDownInlineDrag();
           resultBox.remove();
         });
       }
@@ -209,7 +310,10 @@ document.addEventListener('mouseup', (e) => {
 
       // Видаляємо старі результати, якщо вони є
       const oldBox = document.getElementById('pait-inline-result');
-      if (oldBox) oldBox.remove();
+      if (oldBox) {
+        tearDownInlineDrag();
+        oldBox.remove();
+      }
 
       // Створюємо віконце для результату
       const resultBox = document.createElement('div');
@@ -222,6 +326,8 @@ document.addEventListener('mouseup', (e) => {
         position: 'absolute',
         top: `${tooltipTop + 40}px`, // Трохи нижче тултипу
         left: tooltip.style.left,
+        right: 'auto',
+        bottom: 'auto',
         backgroundColor: '#1e293b', // slate-800
         color: '#f8fafc', // slate-50
         padding: '12px',
@@ -244,24 +350,30 @@ document.addEventListener('mouseup', (e) => {
       });
 
       resultBox.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid #334155; padding-bottom: 4px;">
-        <select id="pait-lang-select" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; font-size: 12px; outline: none; padding: 2px 4px;">
+      <div class="pait-inline-toolbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid #334155; padding-bottom: 4px;">
+        <select id="pait-lang-select" class="pait-inline-select" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; font-size: 12px; outline: none; padding: 2px 4px;">
           <option value="uk">Ukrainian</option>
           <option value="en">English</option>
           <option value="pl">Polish</option>
           <option value="es">Spanish</option>
           <option value="de">German</option>
         </select>
-        <button id="pait-close-inline" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px;">×</button>
+        <button id="pait-close-inline" class="pait-inline-close" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px;">×</button>
       </div>
       <div style="display: flex; gap: 8px; flex: 1; min-height: 120px;">
-        <textarea id="pait-source-editor" style="flex: 1; height: 100%; background: transparent; color: #f8fafc; border: none; resize: none; outline: none; font-size: 14px; font-family: sans-serif;"></textarea>
-        <div style="width: 1px; background-color: #334155;"></div>
-        <textarea id="pait-target-editor" readonly style="flex: 1; height: 100%; background: transparent; color: #10b981; border: none; resize: none; outline: none; font-size: 14px; font-family: sans-serif;"></textarea>
+        <textarea id="pait-source-editor" class="pait-inline-textarea" style="flex: 1; height: 100%; background: transparent; color: #f8fafc; border: none; resize: none; outline: none; font-size: 14px; font-family: sans-serif;"></textarea>
+        <div class="pait-inline-divider" style="width: 1px; background-color: #334155;"></div>
+        <textarea id="pait-target-editor" class="pait-inline-textarea pait-inline-target" readonly style="flex: 1; height: 100%; background: transparent; color: #10b981; border: none; resize: none; outline: none; font-size: 14px; font-family: sans-serif;"></textarea>
       </div>
     `;
 
       document.body.appendChild(resultBox);
+      syncPaitThemeFromStorage();
+
+      const headerEl = resultBox.querySelector('.pait-inline-toolbar');
+      if (headerEl) {
+        initTooltipDrag(headerEl, resultBox);
+      }
 
       const sourceEditor = document.getElementById('pait-source-editor');
       if (sourceEditor) {
@@ -272,6 +384,7 @@ document.addEventListener('mouseup', (e) => {
       const closeBtn = document.getElementById('pait-close-inline');
       if (closeBtn) {
         closeBtn.addEventListener('click', () => {
+          tearDownInlineDrag();
           resultBox.remove();
         });
       }
@@ -394,6 +507,8 @@ document.addEventListener('mouseup', (e) => {
   const left = rect.left + window.scrollX;
   tooltip.style.top = `${Math.max(8, top)}px`;
   tooltip.style.left = `${Math.max(8, left)}px`;
+  tooltip.style.right = 'auto';
+  tooltip.style.bottom = 'auto';
 
   console.log('PAIT selected text:', selectedText);
 });

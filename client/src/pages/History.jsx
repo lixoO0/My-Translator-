@@ -20,7 +20,7 @@ const History = () => {
   }, []);
 
   return (
-    <div className="flex flex-1 flex-col w-full h-full overflow-y-auto bg-slate-950 p-4">
+    <div className="flex h-full w-full flex-1 flex-col overflow-y-auto bg-slate-50 p-4 dark:bg-slate-950">
       <HistoryModal isOpen onClose={() => {}} refreshTick={refreshTick} />
     </div>
   );

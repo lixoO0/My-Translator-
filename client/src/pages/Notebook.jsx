@@ -74,8 +74,8 @@ export const Notebook = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-1 flex-col overflow-y-auto bg-slate-950 p-4 space-y-4">
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg text-slate-400 animate-pulse">
+      <div className="flex flex-1 flex-col space-y-4 overflow-y-auto bg-slate-50 p-4 dark:bg-slate-950">
+        <div className="animate-pulse rounded-2xl border border-slate-100 bg-white p-4 text-slate-500 shadow-sm dark:border dark:border-white/5 dark:bg-slate-900 dark:text-slate-400 dark:shadow-none">
           Loading notes...
         </div>
       </div>
@@ -84,8 +84,8 @@ export const Notebook = () => {
 
   if (error) {
     return (
-      <div className="flex flex-1 flex-col overflow-y-auto bg-slate-950 p-4 space-y-4">
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg text-red-400">
+      <div className="flex flex-1 flex-col space-y-4 overflow-y-auto bg-slate-50 p-4 dark:bg-slate-950">
+        <div className="rounded-2xl border border-slate-100 bg-white p-4 text-red-600 shadow-sm dark:border dark:border-white/5 dark:bg-slate-900 dark:text-red-400 dark:shadow-none">
           Error loading notes
         </div>
       </div>
@@ -95,8 +95,8 @@ export const Notebook = () => {
   const notes = data?.getNotes || [];
   if (!notes || notes.length === 0) {
     return (
-      <div className="flex flex-1 flex-col overflow-y-auto bg-slate-950 p-4 space-y-4">
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg text-slate-400">
+      <div className="flex flex-1 flex-col space-y-4 overflow-y-auto bg-slate-50 p-4 dark:bg-slate-950">
+        <div className="rounded-2xl border border-slate-100 bg-white p-4 text-slate-500 shadow-sm dark:border dark:border-white/5 dark:bg-slate-900 dark:text-slate-400 dark:shadow-none">
           Your saved highlights will appear here
         </div>
       </div>
@@ -104,7 +104,7 @@ export const Notebook = () => {
   }
 
   return (
-    <div className="flex flex-1 overflow-y-auto bg-slate-950 p-4">
+    <div className="flex flex-1 overflow-y-auto bg-slate-50 p-4 dark:bg-slate-950">
       <div className="w-full space-y-4 overflow-x-hidden break-words">
       {notes.map((note) => {
         const dateLabel = note?.createdAt
@@ -115,37 +115,37 @@ export const Notebook = () => {
         return (
           <div
             key={note.id}
-            className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-200 flex flex-col gap-2"
+            className="flex flex-col gap-2 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md dark:border dark:border-white/5 dark:bg-slate-900 dark:shadow-none dark:hover:border-white/10 dark:hover:shadow-md"
           >
             <div className="flex items-start justify-between gap-3">
-              <span className="inline-block px-2 py-1 bg-slate-800 text-slate-300 rounded-md text-xs font-semibold">
+              <span className="inline-block rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                 Note
               </span>
               <div className="text-xs text-slate-500 shrink-0">{dateLabel}</div>
             </div>
 
-            <div className="text-slate-200 text-base font-medium whitespace-pre-wrap break-words">
+            <div className="whitespace-pre-wrap break-words text-base font-medium text-slate-900 dark:text-slate-200">
               {note.text}
             </div>
 
             {hasSource ? (
               <a
                 href={note.sourceUrl}
-                className="text-slate-400 text-sm hover:text-emerald-400 hover:underline break-all"
+                className="break-all text-sm text-slate-600 hover:text-emerald-600 hover:underline dark:text-slate-400 dark:hover:text-emerald-400"
                 target="_blank"
                 rel="noopener noreferrer"
               >
                 {note.sourceUrl}
               </a>
             ) : (
-              <div className="text-slate-400 text-sm"> </div>
+              <div className="text-sm text-slate-500 dark:text-slate-400"> </div>
             )}
 
-            <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-slate-800/50">
+            <div className="mt-2 flex justify-end gap-2 border-t border-slate-100 pt-2 dark:border-white/5">
               <button
                 type="button"
                 onClick={() => navigator.clipboard.writeText((note.text ?? '').toString()).catch(() => {})}
-                className="p-1.5 text-slate-500 hover:text-emerald-400 hover:bg-slate-800 rounded-md transition-colors"
+                className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
                 title="Copy"
                 aria-label="Copy"
               >
@@ -154,7 +154,7 @@ export const Notebook = () => {
               <button
                 type="button"
                 onClick={() => speakText(note.text, 'en')}
-                className="p-1.5 text-slate-500 hover:text-emerald-400 hover:bg-slate-800 rounded-md transition-colors"
+                className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
                 title="Speak"
                 aria-label="Speak"
                 disabled={!note?.text?.trim()}
@@ -164,7 +164,7 @@ export const Notebook = () => {
               <button
                 type="button"
                 onClick={() => handleDelete(note.id)}
-                className="p-1.5 text-slate-500 hover:text-emerald-400 hover:bg-slate-800 rounded-md transition-colors"
+                className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
                 title="Delete"
                 aria-label="Delete"
               >
