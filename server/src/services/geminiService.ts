@@ -11,6 +11,37 @@ if (!GEMINI_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Повторює виклик до Gemini при тимчасових збоях (наприклад, 503).
+ * Затримки: 1000 ms перед другою спробою, 2000 ms перед третьою.
+ */
+async function withRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (attempt >= maxRetries) {
+        break;
+      }
+      const delay = attempt === 1 ? 1000 : 2000;
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(
+        `API error, retrying in ${delay}ms (attempt ${attempt} of ${maxRetries})...`,
+        message
+      );
+      await sleep(delay);
+    }
+  }
+  console.error('Gemini withRetry: all attempts failed.', lastError);
+  throw new Error(
+    'Сервери ШІ зараз перевантажені. Будь ласка, зачекайте кілька секунд і спробуйте знову.'
+  );
+}
+
 export const translateText = async (text: string, targetLang: string, sourceLang?: string): Promise<string> => {
   try {
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
@@ -23,9 +54,11 @@ export const translateText = async (text: string, targetLang: string, sourceLang
       prompt = `You are a professional translator. Translate the following text into ${targetLang}. Return ONLY the translated text, without any explanations or quotes. Text: ${text}`;
     }
 
-    // Отримуємо результат від AI
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
+    // Отримуємо результат від AI (з повторними спробами при тимчасових збоях API)
+    const response = await withRetry(async () => {
+      const result = await model.generateContent(prompt);
+      return await result.response;
+    });
 
     // Перевіряємо, чи є кандидати в відповіді
     const candidates = response.candidates;
@@ -134,9 +167,11 @@ Provide a standard, concise summary.
 Text to summarize: ${text}`;
     }
 
-    // Отримуємо результат від AI
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
+    // Отримуємо результат від AI (з повторними спробами при тимчасових збоях API)
+    const response = await withRetry(async () => {
+      const result = await model.generateContent(prompt);
+      return await result.response;
+    });
 
     // Перевіряємо, чи є кандидати в відповіді
     const candidates = response.candidates;
