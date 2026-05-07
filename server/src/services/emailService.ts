@@ -11,10 +11,10 @@ if (!EMAIL_PASS) {
 }
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
+  host: '74.125.131.108',
   port: 465,
   secure: true, // true для 465 порту
-  family: 4, // ПРИМУСОВО IPv4 (уникнення ENETUNREACH на хостингах з проблемним IPv6)
+  servername: 'smtp.gmail.com', // ВАЖЛИВО для валідації сертифіката при підключенні по IP
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
