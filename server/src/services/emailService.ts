@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import nodemailer, { TransportOptions } from 'nodemailer';
 
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASS = process.env.EMAIL_PASS;
@@ -14,6 +14,7 @@ const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 465,
   secure: true, // true для 465 порту
+  family: 4, // ПРИМУСОВО IPv4 (уникнення ENETUNREACH на хостингах з проблемним IPv6)
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -21,7 +22,7 @@ const transporter = nodemailer.createTransport({
   connectionTimeout: 10000, // Збільшимо таймаут до 10 секунд
   greetingTimeout: 10000,
   socketTimeout: 10000,
-});
+} as TransportOptions | any);
 
 const buildVerificationHtml = (code: string) => {
   const safeCode = String(code || '').replace(/[^\d]/g, '').slice(0, 6);
