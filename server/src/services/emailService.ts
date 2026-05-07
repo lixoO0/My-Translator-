@@ -1,4 +1,4 @@
-import nodemailer, { TransportOptions } from 'nodemailer';
+import nodemailer from 'nodemailer';
 
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASS = process.env.EMAIL_PASS;
@@ -11,18 +11,18 @@ if (!EMAIL_PASS) {
 }
 
 const transporter = nodemailer.createTransport({
-  host: '74.125.131.108',
-  port: 465,
-  secure: true, // true для 465 порту
-  servername: 'smtp.gmail.com', // ВАЖЛИВО для валідації сертифіката при підключенні по IP
+  host: 'smtp.gmail.com', // Повертаємо домен
+  port: 587,
+  secure: false, // false для 587 порту (використовує STARTTLS)
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  connectionTimeout: 10000, // Збільшимо таймаут до 10 секунд
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
-} as TransportOptions | any);
+  tls: {
+    rejectUnauthorized: false, // Допомагає уникнути проблем з сертифікатами на хмарі
+    minVersion: 'TLSv1.2',
+  },
+} as any);
 
 const buildVerificationHtml = (code: string) => {
   const safeCode = String(code || '').replace(/[^\d]/g, '').slice(0, 6);
