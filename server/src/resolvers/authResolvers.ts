@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
 import { GraphQLError } from 'graphql';
 import { OAuth2Client } from 'google-auth-library';
+import { sendVerificationEmail } from '../services/emailService';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -47,18 +48,21 @@ const ensureUniqueUsername = async (base: string) => {
   return candidate;
 };
 
+const OTP_TTL_MS = 15 * 60 * 1000;
+
 export const authResolvers = {
   Mutation: {
     register: async (_: any, { input }: { input: RegisterInput }) => {
       const { username, email, password } = input;
+      const normalizedEmail = email.trim().toLowerCase();
 
       // Перевірка чи існує користувач з таким email або username
       const existingUser = await User.findOne({
-        $or: [{ email }, { username }],
+        $or: [{ email: normalizedEmail }, { username }],
       });
 
       if (existingUser) {
-        if (existingUser.email === email) {
+        if (existingUser.email === normalizedEmail) {
           throw new GraphQLError('User with this email already exists', {
             extensions: { code: 'BAD_USER_INPUT' },
           });
@@ -74,22 +78,69 @@ export const authResolvers = {
       const saltRounds = 10;
       const hashedPassword = await bcrypt.hash(password, saltRounds);
 
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const verificationCodeExpires = new Date(Date.now() + OTP_TTL_MS);
+
       // Створення нового користувача
       const user = new User({
         username,
-        email,
+        email: normalizedEmail,
         password: hashedPassword,
+        isVerified: false,
+        verificationCode,
+        verificationCodeExpires,
       });
 
       await user.save();
 
-      // Створення JWT токена
+      try {
+        await sendVerificationEmail(user.email, verificationCode);
+      } catch (err) {
+        await User.deleteOne({ _id: user._id });
+        throw new GraphQLError('Не вдалося надіслати код. Спробуйте пізніше.', {
+          extensions: { code: 'INTERNAL_SERVER_ERROR' },
+        });
+      }
+
+      return { message: 'Код верифікації надіслано на вашу пошту' };
+    },
+
+    verifyEmail: async (_: any, { email, code }: { email: string; code: string }) => {
+      const normalizedEmail = email.trim().toLowerCase();
+      const safeCode = String(code || '').replace(/[^\d]/g, '').slice(0, 6);
+
+      const user = await User.findOne({ email: normalizedEmail });
+      if (!user) {
+        throw new GraphQLError('User not found', {
+          extensions: { code: 'BAD_USER_INPUT' },
+        });
+      }
+
+      if (user.isVerified) {
+        throw new GraphQLError('Email already verified', {
+          extensions: { code: 'BAD_USER_INPUT' },
+        });
+      }
+
+      if (!user.verificationCode || user.verificationCode !== safeCode) {
+        throw new GraphQLError('Невірний код', {
+          extensions: { code: 'BAD_USER_INPUT' },
+        });
+      }
+
+      if (user.verificationCodeExpires && user.verificationCodeExpires.getTime() < Date.now()) {
+        throw new GraphQLError('Код застарів. Будь ласка, запитайте новий', {
+          extensions: { code: 'BAD_USER_INPUT' },
+        });
+      }
+
+      user.isVerified = true;
+      user.verificationCode = null;
+      user.verificationCodeExpires = null;
+      await user.save();
+
       const userId = String(user._id);
-      const token = jwt.sign(
-        { userId, email: user.email },
-        JWT_SECRET,
-        { expiresIn: '7d' }
-      );
+      const token = jwt.sign({ userId, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
       return {
         token,
@@ -102,6 +153,40 @@ export const authResolvers = {
       };
     },
 
+    resendVerificationCode: async (_: any, { email }: { email: string }) => {
+      const normalizedEmail = email.trim().toLowerCase();
+
+      const user = await User.findOne({ email: normalizedEmail });
+      if (!user) {
+        throw new GraphQLError('User not found', {
+          extensions: { code: 'BAD_USER_INPUT' },
+        });
+      }
+
+      if (user.isVerified) {
+        throw new GraphQLError('Email already verified', {
+          extensions: { code: 'BAD_USER_INPUT' },
+        });
+      }
+
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const verificationCodeExpires = new Date(Date.now() + OTP_TTL_MS);
+
+      user.verificationCode = verificationCode;
+      user.verificationCodeExpires = verificationCodeExpires;
+      await user.save();
+
+      try {
+        await sendVerificationEmail(user.email, verificationCode);
+      } catch (err) {
+        throw new GraphQLError('Не вдалося надіслати код. Спробуйте пізніше.', {
+          extensions: { code: 'INTERNAL_SERVER_ERROR' },
+        });
+      }
+
+      return { message: 'Новий код надіслано' };
+    },
+
     login: async (_: any, { input }: { input: LoginInput }) => {
       const { emailOrUsername, password } = input;
 
@@ -112,6 +197,12 @@ export const authResolvers = {
 
       if (!user) {
         throw new GraphQLError('Invalid email/username or password', {
+          extensions: { code: 'UNAUTHENTICATED' },
+        });
+      }
+
+      if (!user.isVerified) {
+        throw new GraphQLError('Будь ласка, підтвердіть пошту', {
           extensions: { code: 'UNAUTHENTICATED' },
         });
       }
@@ -196,8 +287,16 @@ export const authResolvers = {
           username,
           email,
           password: hashedPassword,
+          isVerified: true,
+          verificationCode: null,
+          verificationCodeExpires: null,
         });
 
+        await user.save();
+      } else if (!user.isVerified) {
+        user.isVerified = true;
+        user.verificationCode = null;
+        user.verificationCodeExpires = null;
         await user.save();
       }
 

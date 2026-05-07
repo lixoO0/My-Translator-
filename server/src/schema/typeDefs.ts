@@ -16,6 +16,10 @@ export const typeDefs = `#graphql
     user: User!
   }
 
+  type MessageResponse {
+    message: String!
+  }
+
   input RegisterInput {
     username: String!
     email: String!
@@ -55,7 +59,9 @@ export const typeDefs = `#graphql
   }
 
   type Mutation {
-    register(input: RegisterInput!): AuthPayload!
+    register(input: RegisterInput!): MessageResponse!
+    verifyEmail(email: String!, code: String!): AuthPayload!
+    resendVerificationCode(email: String!): MessageResponse!
     login(input: LoginInput!): AuthPayload!
     googleLogin(token: String!): AuthData
     translate(text: String!, sourceLang: String, targetLang: String!): HistoryItem!

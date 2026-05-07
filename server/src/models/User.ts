@@ -4,6 +4,9 @@ export interface IUser extends Document {
   username: string;
   email: string;
   password: string;
+  isVerified: boolean;
+  verificationCode?: string | null;
+  verificationCodeExpires?: Date | null;
   createdAt: Date;
 }
 
@@ -29,6 +32,18 @@ const UserSchema = new Schema<IUser>(
       type: String,
       required: [true, 'Password is required'],
       minlength: [6, 'Password must be at least 6 characters'],
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verificationCode: {
+      type: String,
+      default: null,
+    },
+    verificationCodeExpires: {
+      type: Date,
+      default: null,
     },
   },
   {
