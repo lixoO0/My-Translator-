@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from '../components/Layout';
-import Login from '../pages/Login';
-import Register from '../pages/Register';
+import Auth from '../pages/Auth';
 import Translate from '../pages/Translate';
 import Summarize from '../pages/Summarize';
 import History from '../pages/History';
@@ -44,7 +43,7 @@ const AppRoutes = () => {
           path="/login"
           element={
             <GuestRoute>
-              <Login />
+              <Auth />
             </GuestRoute>
           }
         />
@@ -52,7 +51,7 @@ const AppRoutes = () => {
           path="/register"
           element={
             <GuestRoute>
-              <Register />
+              <Auth />
             </GuestRoute>
           }
         />
