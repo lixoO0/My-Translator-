@@ -6,7 +6,7 @@ export const sendVerificationEmail = async (email: string, code: string) => {
   try {
     console.log('=== ВІДПРАВКА ЧЕРЕЗ RESEND ===');
     await resend.emails.send({
-      from: 'onboarding@resend.dev', // На безкоштовному тарифі тільки так
+      from: 'PAIT <auth@pait-app.xyz>', // Тепер використовуємо твій домен!
       to: email,
       subject: 'Ваш код підтвердження PAIT',
       html: `<strong>Ваш код: ${code}</strong>`,
