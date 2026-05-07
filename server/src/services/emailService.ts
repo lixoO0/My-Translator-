@@ -49,11 +49,16 @@ const buildVerificationHtml = (code: string) => {
 
 export async function sendVerificationEmail(toEmail: string, code: string) {
   const html = buildVerificationHtml(code);
-  await transporter.sendMail({
-    from: `PAIT <${EMAIL_USER}>`,
-    to: toEmail,
-    subject: 'Ваш код підтвердження пошти',
-    html,
-  });
+  try {
+    await transporter.sendMail({
+      from: `PAIT <${EMAIL_USER}>`,
+      to: toEmail,
+      subject: 'Ваш код підтвердження пошти',
+      html,
+    });
+  } catch (error) {
+    console.error('=== ПОМИЛКА EMAIL ===', error);
+    throw new Error('Не вдалося надіслати код. Спробуйте пізніше.');
+  }
 }
 

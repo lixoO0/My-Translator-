@@ -52,7 +52,9 @@ const OTP_TTL_MS = 15 * 60 * 1000;
 
 export const authResolvers = {
   Mutation: {
-    register: async (_: any, { input }: { input: RegisterInput }) => {
+    register: async (_: any, args: { input: RegisterInput }) => {
+      console.log('=== РЕЄСТРАЦІЯ ПОЧАЛАСЯ ===, email:', args.input?.email);
+      const { input } = args;
       const { username, email, password } = input;
       const normalizedEmail = email.trim().toLowerCase();
 
@@ -102,6 +104,7 @@ export const authResolvers = {
         });
       }
 
+      console.log('=== РЕЄСТРАЦІЯ УСПІШНА ===');
       return { message: 'Код верифікації надіслано на вашу пошту' };
     },
 
