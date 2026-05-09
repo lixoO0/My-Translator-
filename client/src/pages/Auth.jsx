@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useMutation } from '@apollo/client/react';
-import { LOGIN_USER, REGISTER_USER, RESEND_VERIFICATION_CODE, VERIFY_EMAIL } from '../graphql/mutations';
+import {
+  FORGOT_PASSWORD,
+  LOGIN_USER,
+  REGISTER_USER,
+  RESET_PASSWORD,
+  RESEND_VERIFICATION_CODE,
+  VERIFY_EMAIL,
+} from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
 import { Pencil } from 'lucide-react';
 
@@ -14,6 +21,15 @@ const inputClass =
 
 const primaryButtonClass =
   'w-full rounded-xl bg-teal-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60';
+
+const resetAccentSubmitClass =
+  'w-full rounded-lg bg-teal-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-teal-600 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60';
+
+const sendCodeButtonClass =
+  'w-full rounded-lg border-2 border-teal-500 bg-transparent px-4 py-3 text-sm font-semibold text-teal-600 shadow-none transition-all duration-200 hover:bg-teal-500/10 disabled:cursor-not-allowed disabled:opacity-60 dark:border-teal-400 dark:text-teal-400 dark:hover:bg-teal-400/10';
+
+const forgotPasswordLinkClass =
+  'inline-flex bg-transparent p-0 text-xs font-medium text-teal-600 shadow-none ring-0 transition-colors hover:text-teal-700 hover:underline dark:text-teal-400 dark:hover:text-teal-300';
 
 export const Auth = () => {
   const location = useLocation();
@@ -34,9 +50,19 @@ export const Auth = () => {
   const [inlineError, setInlineError] = useState('');
   const [resendTimer, setResendTimer] = useState(60);
 
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetCodeSent, setResetCodeSent] = useState(false);
+  const [resetBanner, setResetBanner] = useState(null);
+  const [loginBanner, setLoginBanner] = useState(null);
+
   useEffect(() => {
     setAuthStep(initialStep);
     setInlineError('');
+    if (initialStep === 'login') {
+      setResetBanner(null);
+    }
   }, [initialStep]);
 
   useEffect(() => {
@@ -89,6 +115,44 @@ export const Auth = () => {
     onError: () => {},
   });
 
+  const [forgotPassword, forgotState] = useMutation(FORGOT_PASSWORD, {
+    onCompleted: ({ forgotPassword: fp }) => {
+      setResetCodeSent(true);
+      setResetBanner({
+        variant: 'success',
+        text: fp?.message || 'Code sent to your email!',
+      });
+    },
+    onError: (err) => {
+      setResetBanner({
+        variant: 'error',
+        text: err.message || 'Something went wrong',
+      });
+    },
+  });
+
+  const [resetPasswordMut, resetPwdState] = useMutation(RESET_PASSWORD, {
+    onCompleted: ({ resetPassword: rp }) => {
+      setResetEmail('');
+      setResetCode('');
+      setResetNewPassword('');
+      setResetCodeSent(false);
+      setResetBanner(null);
+      setAuthStep('login');
+      navigate('/login', { replace: true });
+      setLoginBanner({
+        variant: 'success',
+        text: rp?.message || 'Password updated successfully',
+      });
+    },
+    onError: (err) => {
+      setResetBanner({
+        variant: 'error',
+        text: err.message.includes('Invalid') ? 'Invalid code' : err.message,
+      });
+    },
+  });
+
   const handleVerify = (codeOverride) => {
     if (verifyState.loading) return;
     const email = (emailForVerification || registerForm.email || '').trim().toLowerCase();
@@ -115,12 +179,77 @@ export const Auth = () => {
   const submitLogin = (e) => {
     e.preventDefault();
     setInlineError('');
+    setLoginBanner(null);
     loginUser({
       variables: {
         emailOrUsername: loginForm.emailOrUsername,
         password: loginForm.password,
       },
     });
+  };
+
+  const openResetPassword = () => {
+    setInlineError('');
+    setResetBanner(null);
+    const raw = loginForm.emailOrUsername.trim();
+    setResetEmail(raw.includes('@') ? raw.toLowerCase() : '');
+    setResetCode('');
+    setResetNewPassword('');
+    setResetCodeSent(false);
+    setAuthStep('resetPassword');
+  };
+
+  const backToLoginFromReset = () => {
+    setAuthStep('login');
+    navigate('/login', { replace: true });
+    setResetBanner(null);
+    setResetCodeSent(false);
+  };
+
+  const sendResetCode = () => {
+    const email = resetEmail.trim().toLowerCase();
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+      setResetBanner({ variant: 'error', text: 'Enter a valid email address' });
+      return;
+    }
+    setResetBanner(null);
+    forgotPassword({ variables: { email } });
+  };
+
+  const submitForgotCode = (e) => {
+    e.preventDefault();
+    sendResetCode();
+  };
+
+  const submitResetPassword = (e) => {
+    e.preventDefault();
+    const email = resetEmail.trim().toLowerCase();
+    const code = resetCode.replace(/[^\d]/g, '').slice(0, 6);
+    if (code.length !== 6) {
+      setResetBanner({ variant: 'error', text: 'Invalid code' });
+      return;
+    }
+    if (!resetNewPassword || resetNewPassword.length < 6) {
+      setResetBanner({ variant: 'error', text: 'Password must be at least 6 characters' });
+      return;
+    }
+    setResetBanner(null);
+    resetPasswordMut({
+      variables: {
+        email,
+        code,
+        newPassword: resetNewPassword,
+      },
+    });
+  };
+
+  const handleResetPanelSubmit = (e) => {
+    e.preventDefault();
+    if (!resetCodeSent) {
+      sendResetCode();
+      return;
+    }
+    submitResetPassword(e);
   };
 
   const submitRegister = (e) => {
@@ -148,67 +277,186 @@ export const Auth = () => {
     resendState.error?.message ||
     '';
 
-  const isBusy = loginState.loading || registerState.loading || verifyState.loading || resendState.loading;
+  const isBusy =
+    loginState.loading ||
+    registerState.loading ||
+    verifyState.loading ||
+    resendState.loading ||
+    forgotState.loading ||
+    resetPwdState.loading;
 
   return (
     <section className="flex min-h-[calc(100vh-64px)] items-center justify-center bg-slate-50 px-4 py-10 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className={cardClass}>
-        {authStep === 'login' && (
+        {(authStep === 'login' || authStep === 'resetPassword') && (
           <>
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Вхід</h1>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Увійдіть, щоб продовжити роботу.
-              </p>
-            </div>
-
-            <form onSubmit={submitLogin} className="space-y-4">
-              <label className="block">
-                <span className={labelClass}>Email або username</span>
-                <input
-                  className={inputClass}
-                  type="text"
-                  name="emailOrUsername"
-                  value={loginForm.emailOrUsername}
-                  onChange={(e) => setLoginForm((p) => ({ ...p, emailOrUsername: e.target.value }))}
-                  placeholder="you@example.com"
-                  autoComplete="username"
-                  required
-                />
-              </label>
-
-              <label className="block">
-                <span className={labelClass}>Пароль</span>
-                <input
-                  className={inputClass}
-                  type="password"
-                  name="password"
-                  value={loginForm.password}
-                  onChange={(e) => setLoginForm((p) => ({ ...p, password: e.target.value }))}
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                  required
-                />
-              </label>
-
-              {errorText ? <p className="text-sm text-rose-600 dark:text-rose-400">{errorText}</p> : null}
-
-              <button className={primaryButtonClass} type="submit" disabled={isBusy}>
-                {loginState.loading ? 'Входимо...' : 'Увійти'}
-              </button>
-
-              <button
-                type="button"
-                className="w-full text-sm text-slate-500 transition-colors hover:text-slate-700 dark:hover:text-slate-300"
-                onClick={() => {
-                  setInlineError('');
-                  setAuthStep('register');
-                  navigate('/register', { replace: true });
+            <div className="overflow-hidden w-full">
+              <div
+                className="flex w-[200%] transition-transform duration-300 ease-out motion-reduce:transition-none"
+                style={{
+                  transform: authStep === 'resetPassword' ? 'translateX(-50%)' : 'translateX(0)',
                 }}
               >
-                Немає акаунта? Зареєструватися
-              </button>
-            </form>
+                <div className="w-1/2 shrink-0 pr-3 box-border">
+                  <div className="mb-6">
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Вхід</h1>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      Увійдіть, щоб продовжити роботу.
+                    </p>
+                  </div>
+
+                  <form onSubmit={submitLogin} className="space-y-4">
+                    <label className="block">
+                      <span className={labelClass}>Email або username</span>
+                      <input
+                        className={inputClass}
+                        type="text"
+                        name="emailOrUsername"
+                        value={loginForm.emailOrUsername}
+                        onChange={(e) => setLoginForm((p) => ({ ...p, emailOrUsername: e.target.value }))}
+                        placeholder="you@example.com"
+                        autoComplete="username"
+                        required
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className={labelClass}>Пароль</span>
+                      <input
+                        className={inputClass}
+                        type="password"
+                        name="password"
+                        value={loginForm.password}
+                        onChange={(e) => setLoginForm((p) => ({ ...p, password: e.target.value }))}
+                        placeholder="••••••••"
+                        autoComplete="current-password"
+                        required
+                      />
+                    </label>
+
+                    <div className="flex justify-end">
+                      <button type="button" className={forgotPasswordLinkClass} onClick={openResetPassword}>
+                        Forgot password?
+                      </button>
+                    </div>
+
+                    {loginBanner?.variant === 'success' ? (
+                      <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">{loginBanner.text}</p>
+                    ) : null}
+
+                    {errorText ? <p className="text-sm text-rose-600 dark:text-rose-400">{errorText}</p> : null}
+
+                    <button className={primaryButtonClass} type="submit" disabled={isBusy}>
+                      {loginState.loading ? 'Входимо...' : 'Увійти'}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="w-full text-sm text-slate-500 transition-colors hover:text-slate-700 dark:hover:text-slate-300"
+                      onClick={() => {
+                        setInlineError('');
+                        setAuthStep('register');
+                        navigate('/register', { replace: true });
+                      }}
+                    >
+                      Немає акаунта? Зареєструватися
+                    </button>
+                  </form>
+                </div>
+
+                <div className="w-1/2 shrink-0 pl-3 box-border">
+                  <div className="mb-6">
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                      Reset Password
+                    </h1>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      Ми надішлемо код на вашу пошту.
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleResetPanelSubmit} className="space-y-4">
+                    <label className="block">
+                      <span className={labelClass}>Email</span>
+                      <input
+                        className={inputClass}
+                        type="email"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        autoComplete="email"
+                        required
+                      />
+                    </label>
+
+                    <button
+                      type="button"
+                      className={sendCodeButtonClass}
+                      onClick={submitForgotCode}
+                      disabled={isBusy || forgotState.loading}
+                    >
+                      {forgotState.loading ? 'Sending...' : 'Send Code'}
+                    </button>
+
+                    {resetCodeSent ? (
+                      <>
+                        <label className="block animate-in fade-in duration-300">
+                          <span className={labelClass}>Code</span>
+                          <input
+                            className={inputClass}
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            value={resetCode}
+                            onChange={(e) =>
+                              setResetCode(e.target.value.replace(/[^\d]/g, '').slice(0, 6))
+                            }
+                            placeholder="••••••"
+                            maxLength={6}
+                          />
+                        </label>
+
+                        <label className="block animate-in fade-in duration-300">
+                          <span className={labelClass}>New Password</span>
+                          <input
+                            className={inputClass}
+                            type="password"
+                            value={resetNewPassword}
+                            onChange={(e) => setResetNewPassword(e.target.value)}
+                            placeholder="••••••••"
+                            autoComplete="new-password"
+                            minLength={6}
+                          />
+                        </label>
+
+                        <button className={resetAccentSubmitClass} type="submit" disabled={isBusy}>
+                          {resetPwdState.loading ? 'Updating...' : 'Update Password'}
+                        </button>
+                      </>
+                    ) : null}
+
+                    {resetBanner ? (
+                      <p
+                        className={
+                          resetBanner.variant === 'success'
+                            ? 'text-sm font-medium text-emerald-600 dark:text-emerald-400'
+                            : 'text-sm font-medium text-rose-600 dark:text-rose-400'
+                        }
+                      >
+                        {resetBanner.text}
+                      </p>
+                    ) : null}
+
+                    <button
+                      type="button"
+                      className="w-full text-sm text-slate-500 transition-colors hover:text-slate-700 dark:hover:text-slate-300"
+                      onClick={backToLoginFromReset}
+                    >
+                      Back to login
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
           </>
         )}
 

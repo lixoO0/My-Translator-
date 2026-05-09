@@ -20,6 +20,22 @@ export const LOGIN_USER = gql`
   }
 `;
 
+export const FORGOT_PASSWORD = gql`
+  mutation ForgotPassword($email: String!) {
+    forgotPassword(email: $email) {
+      message
+    }
+  }
+`;
+
+export const RESET_PASSWORD = gql`
+  mutation ResetPassword($email: String!, $code: String!, $newPassword: String!) {
+    resetPassword(email: $email, code: $code, newPassword: $newPassword) {
+      message
+    }
+  }
+`;
+
 export const GOOGLE_LOGIN = gql`
   mutation GoogleLogin($token: String!) {
     googleLogin(token: $token) {
