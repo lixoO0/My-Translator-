@@ -63,6 +63,8 @@ export const typeDefs = `#graphql
     verifyEmail(email: String!, code: String!): AuthPayload!
     resendVerificationCode(email: String!): MessageResponse!
     login(input: LoginInput!): AuthPayload!
+    forgotPassword(email: String!): MessageResponse!
+    resetPassword(email: String!, code: String!, newPassword: String!): MessageResponse!
     googleLogin(token: String!): AuthData
     translate(text: String!, sourceLang: String, targetLang: String!): HistoryItem!
     summarize(text: String!, language: String, length: String): HistoryItem!

@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
 import { GraphQLError } from 'graphql';
 import { OAuth2Client } from 'google-auth-library';
-import { sendVerificationEmail } from '../services/emailService';
+import { sendPasswordResetEmail, sendVerificationEmail } from '../services/emailService';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -238,6 +238,74 @@ export const authResolvers = {
       };
     },
 
+    forgotPassword: async (_: any, { email }: { email: string }) => {
+      const normalizedEmail = email.trim().toLowerCase();
+
+      const user = await User.findOne({ email: normalizedEmail });
+      if (user) {
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const resetCodeExpires = new Date(Date.now() + OTP_TTL_MS);
+
+        user.resetCode = resetCode;
+        user.resetCodeExpires = resetCodeExpires;
+        await user.save();
+
+        try {
+          await sendPasswordResetEmail(user.email, resetCode);
+        } catch {
+          user.resetCode = null;
+          user.resetCodeExpires = null;
+          await user.save();
+          throw new GraphQLError('Не вдалося надіслати код. Спробуйте пізніше.', {
+            extensions: { code: 'INTERNAL_SERVER_ERROR' },
+          });
+        }
+      }
+
+      return { message: 'Code sent to your email!' };
+    },
+
+    resetPassword: async (
+      _: any,
+      { email, code, newPassword }: { email: string; code: string; newPassword: string }
+    ) => {
+      const normalizedEmail = email.trim().toLowerCase();
+      const safeCode = String(code || '').replace(/[^\d]/g, '').slice(0, 6);
+
+      if (!newPassword || newPassword.length < 6) {
+        throw new GraphQLError('Password must be at least 6 characters', {
+          extensions: { code: 'BAD_USER_INPUT' },
+        });
+      }
+
+      const user = await User.findOne({ email: normalizedEmail });
+      if (!user || !user.resetCode) {
+        throw new GraphQLError('Invalid code', {
+          extensions: { code: 'BAD_USER_INPUT' },
+        });
+      }
+
+      if (user.resetCode !== safeCode) {
+        throw new GraphQLError('Invalid code', {
+          extensions: { code: 'BAD_USER_INPUT' },
+        });
+      }
+
+      if (!user.resetCodeExpires || user.resetCodeExpires.getTime() < Date.now()) {
+        throw new GraphQLError('Invalid code', {
+          extensions: { code: 'BAD_USER_INPUT' },
+        });
+      }
+
+      const saltRounds = 10;
+      user.password = await bcrypt.hash(newPassword, saltRounds);
+      user.resetCode = null;
+      user.resetCodeExpires = null;
+      await user.save();
+
+      return { message: 'Password updated successfully' };
+    },
+
     googleLogin: async (_: any, { token }: { token: string }) => {
       if (!token) {
         throw new GraphQLError('Google token is required', {
@@ -293,6 +361,8 @@ export const authResolvers = {
           isVerified: true,
           verificationCode: null,
           verificationCodeExpires: null,
+          resetCode: null,
+          resetCodeExpires: null,
         });
 
         await user.save();
