@@ -1,16 +1,19 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import Navbar from './Navbar';
 import HistoryModal from './HistoryModal';
 
 const Layout = () => {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const location = useLocation();
 
   return (
-    <div className="relative flex h-screen w-full flex-col overflow-hidden bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-300">
+    <div className="pait-layout-root relative flex h-screen w-full flex-col overflow-hidden">
       <Navbar onOpenHistory={() => setIsHistoryOpen(true)} />
-      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <Outlet />
+      <main className="pait-main">
+        <div key={location.pathname} className="pait-page">
+          <Outlet />
+        </div>
       </main>
 
       <HistoryModal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} />

@@ -3,23 +3,13 @@ import { useEffect, useRef } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import AccessibilityMenu from './AccessibilityMenu';
-
-const tabBase =
-  'shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-200';
-const tabActive =
-  'bg-emerald-500/10 text-emerald-700 shadow-sm ring-1 ring-emerald-500/40 dark:text-emerald-400 dark:ring-emerald-500/50 dark:shadow-sm';
-const tabInactive =
-  'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200';
-
-const pillButton =
-  'shrink-0 rounded-full border border-slate-300/90 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 shadow-sm transition-all duration-200 hover:border-slate-400 hover:bg-slate-50 dark:border-slate-600/80 dark:bg-slate-800/60 dark:text-slate-200 dark:shadow-none dark:hover:border-slate-500 dark:hover:bg-slate-800';
-
-const iconPillButton = `${pillButton} flex h-9 w-9 items-center justify-center p-0`;
 
 export const Navbar = ({ onOpenHistory }) => {
   const { isAuthenticated, user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { language, toggleLanguage, t } = useLanguage();
   const navRef = useRef(null);
 
   useEffect(() => {
@@ -36,41 +26,46 @@ export const Navbar = ({ onOpenHistory }) => {
     return () => el.removeEventListener('wheel', handleWheel);
   }, [isAuthenticated]);
 
+  const tabClass = ({ isActive }) =>
+    `pait-nav-tab ${isActive ? 'pait-nav-tab--active' : ''}`;
+
+  const langLabel = language === 'uk' ? t('lang.uk_short') : t('lang.en_short');
+
   return (
-    <header className="shrink-0 border-b border-slate-200/80 bg-white/80 backdrop-blur-md dark:border-slate-800/60 dark:bg-slate-950/80">
-      <div className="flex min-w-0 items-stretch gap-0 sm:gap-2">
+    <header className="pait-header">
+      <div className="pait-header-inner">
         <Link
           to={isAuthenticated ? '/translate' : '/'}
-          className="flex shrink-0 items-center px-3 py-3 text-sm font-extrabold uppercase tracking-[0.2em] text-slate-900 no-underline dark:text-slate-100"
+          className="pait-brand"
         >
           PAIT
         </Link>
 
-        <nav
-          ref={navRef}
-          className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap border-slate-200/60 bg-transparent p-3 scrollbar-hide sm:border-l dark:border-slate-700/40"
-        >
+        <nav ref={navRef} className="pait-nav-row scrollbar-hide">
           {!isAuthenticated ? (
             <>
-              <NavLink
-                to="/login"
-                className={({ isActive }) => `${tabBase} ${isActive ? tabActive : tabInactive}`}
-              >
-                Login
+              <NavLink to="/login" className={tabClass}>
+                {t('nav.login')}
               </NavLink>
-              <NavLink
-                to="/register"
-                className={({ isActive }) => `${tabBase} ${isActive ? tabActive : tabInactive}`}
-              >
-                Register
+              <NavLink to="/register" className={tabClass}>
+                {t('nav.register')}
               </NavLink>
-              <div className="ml-auto flex shrink-0 items-center gap-2 pl-2">
+              <div className="pait-nav-actions">
+                <button
+                  type="button"
+                  onClick={toggleLanguage}
+                  className="pait-nav-lang-btn"
+                  aria-label={language === 'uk' ? 'Switch to English' : 'Перемкнути на українську'}
+                  title={language === 'uk' ? 'English' : 'Українська'}
+                >
+                  {langLabel}
+                </button>
                 <button
                   type="button"
                   onClick={toggleTheme}
-                  className={iconPillButton}
-                  aria-label={theme === 'dark' ? 'Увімкнути світлу тему' : 'Увімкнути темну тему'}
-                  title={theme === 'dark' ? 'Світла тема' : 'Темна тема'}
+                  className="pait-nav-icon-btn"
+                  aria-label={theme === 'dark' ? t('nav.theme_to_light') : t('nav.theme_to_dark')}
+                  title={theme === 'dark' ? t('nav.theme_light') : t('nav.theme_dark')}
                 >
                   {theme === 'dark' ? (
                     <Sun className="h-4 w-4 shrink-0" />
@@ -83,44 +78,39 @@ export const Navbar = ({ onOpenHistory }) => {
             </>
           ) : (
             <>
-              <NavLink
-                to="/translate"
-                className={({ isActive }) => `${tabBase} ${isActive ? tabActive : tabInactive}`}
-              >
-                Translate
+              <NavLink to="/translate" className={tabClass}>
+                {t('nav.translate')}
               </NavLink>
-              <NavLink
-                to="/summarize"
-                className={({ isActive }) => `${tabBase} ${isActive ? tabActive : tabInactive}`}
-              >
-                Summarize
+              <NavLink to="/summarize" className={tabClass}>
+                {t('nav.summarize')}
               </NavLink>
-              <NavLink
-                to="/notebook"
-                className={({ isActive }) => `${tabBase} ${isActive ? tabActive : tabInactive}`}
-              >
-                Notebook
+              <NavLink to="/notebook" className={tabClass}>
+                {t('nav.notebook')}
               </NavLink>
-              <button
-                type="button"
-                onClick={() => onOpenHistory?.()}
-                className={pillButton}
-                aria-label="View history"
-              >
-                History
+              <button type="button" onClick={() => onOpenHistory?.()} className="pait-nav-tab">
+                {t('nav.history')}
               </button>
-              <span className="hidden shrink-0 text-sm text-slate-500 dark:text-slate-500 md:inline">
-                Hello,{' '}
-                <span className="font-medium text-slate-800 dark:text-slate-300">{user?.username}</span>
+              <span className="pait-nav-greeting">
+                {t('nav.hello')},{' '}
+                <strong>{user?.username}</strong>
               </span>
-              <div className="ml-auto flex shrink-0 items-center gap-2 pl-2">
+              <div className="pait-nav-actions">
                 <AccessibilityMenu />
                 <button
                   type="button"
+                  onClick={toggleLanguage}
+                  className="pait-nav-lang-btn"
+                  aria-label={language === 'uk' ? 'Switch to English' : 'Перемкнути на українську'}
+                  title={language === 'uk' ? 'English' : 'Українська'}
+                >
+                  {langLabel}
+                </button>
+                <button
+                  type="button"
                   onClick={toggleTheme}
-                  className={iconPillButton}
-                  aria-label={theme === 'dark' ? 'Увімкнути світлу тему' : 'Увімкнути темну тему'}
-                  title={theme === 'dark' ? 'Світла тема' : 'Темна тема'}
+                  className="pait-nav-icon-btn"
+                  aria-label={theme === 'dark' ? t('nav.theme_to_light') : t('nav.theme_to_dark')}
+                  title={theme === 'dark' ? t('nav.theme_light') : t('nav.theme_dark')}
                 >
                   {theme === 'dark' ? (
                     <Sun className="h-4 w-4 shrink-0" />
@@ -128,8 +118,8 @@ export const Navbar = ({ onOpenHistory }) => {
                     <Moon className="h-4 w-4 shrink-0" />
                   )}
                 </button>
-                <button type="button" onClick={logout} className={pillButton}>
-                  Logout
+                <button type="button" onClick={logout} className="pait-nav-tab">
+                  {t('nav.logout')}
                 </button>
               </div>
             </>

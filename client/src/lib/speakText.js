@@ -9,17 +9,43 @@ export function warmupSpeechSynthesis() {
 }
 
 /**
+ * @param {boolean} arg3OrRetry - legacy: internal retry flag
+ * @param {object} [arg4OrCallbacks] - legacy: callbacks when arg3 is boolean
+ * @param {object} [callbacksOnly] - speakText(text, lang, { onStart, onEnd, onError })
+ */
+function parseSpeakArgs(arg3, arg4) {
+  if (typeof arg3 === 'boolean') {
+    return { _isRetry: arg3, callbacks: arg4 && typeof arg4 === 'object' ? arg4 : {} };
+  }
+  if (arg3 && typeof arg3 === 'object') {
+    return { _isRetry: false, callbacks: arg3 };
+  }
+  return { _isRetry: false, callbacks: {} };
+}
+
+/**
  * @param {string} text
  * @param {string} [langCode='uk-UA'] BCP-47 or short codes 'uk' / 'en'
- * @param {boolean} [_isRetry] internal: avoid infinite wait if no voices ever load
+ * @param {boolean|object} [arg3]
+ * @param {object} [arg4]
  */
-export function speakText(text, langCode = 'uk-UA', _isRetry = false) {
+export function speakText(text, langCode = 'uk-UA', arg3, arg4) {
+  const { _isRetry, callbacks } = parseSpeakArgs(arg3, arg4);
+  const { onStart, onEnd, onError } = callbacks;
+
   if (!text?.trim()) return;
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
 
   window.speechSynthesis.cancel();
 
   const utterance = new SpeechSynthesisUtterance(text.trim());
+
+  utterance.onend = () => {
+    onEnd?.();
+  };
+  utterance.onerror = () => {
+    onError?.();
+  };
 
   const normalizedLang =
     langCode === 'uk' ? 'uk-UA' : langCode === 'en' ? 'en-US' : langCode;
@@ -30,7 +56,7 @@ export function speakText(text, langCode = 'uk-UA', _isRetry = false) {
     const synth = window.speechSynthesis;
     const onVoices = () => {
       synth.removeEventListener('voiceschanged', onVoices);
-      speakText(text, normalizedLang, true);
+      speakText(text, normalizedLang, true, callbacks);
     };
     synth.addEventListener('voiceschanged', onVoices);
     return;
@@ -61,4 +87,5 @@ export function speakText(text, langCode = 'uk-UA', _isRetry = false) {
 
   utterance.rate = 0.9;
   window.speechSynthesis.speak(utterance);
+  onStart?.();
 }

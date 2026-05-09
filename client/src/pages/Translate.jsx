@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { TRANSLATE_TEXT } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { Volume2 } from 'lucide-react';
+import { Square, Volume2, Trash2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { speakText, warmupSpeechSynthesis } from '@/lib/speakText';
@@ -14,9 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-
-// Language pickers use Radix <Select> (custom dropdown), not native <select>/<option>.
-// Dark styling for list items lives on <SelectItem /> + <SelectContent />.
+import { useLocalStorage, WORKSPACE_STORAGE_KEYS } from '@/hooks/useLocalStorage';
 
 const LANGUAGES = [
   { value: 'English', label: 'English' },
@@ -32,11 +31,6 @@ const LANGUAGES = [
   { value: 'Korean', label: 'Korean' },
   { value: 'Arabic', label: 'Arabic' },
   { value: 'Turkish', label: 'Turkish' },
-];
-
-const LANGUAGES_WITH_AUTO = [
-  { value: 'auto', label: 'Auto-detect' },
-  ...LANGUAGES,
 ];
 
 const SPEECH_LANGUAGE_MAP = {
@@ -57,12 +51,38 @@ const SPEECH_LANGUAGE_MAP = {
 
 const getSpeechLanguage = (language) => SPEECH_LANGUAGE_MAP[language] || language;
 
+const DEFAULT_TRANSLATE_WORKSPACE = Object.freeze({
+  text: '',
+  translatedText: '',
+  sourceLang: 'auto',
+  targetLang: 'English',
+  lastProcessedText: '',
+  lastProcessedSettings: null,
+});
+
 export const Translate = () => {
-  const [text, setText] = useState('');
-  const [sourceLang, setSourceLang] = useState('auto');
-  const [targetLang, setTargetLang] = useState('English');
-  const [translatedText, setTranslatedText] = useState('');
+  const { t } = useLanguage();
+  const languagesWithAuto = useMemo(
+    () => [{ value: 'auto', label: t('translate.auto_detect') }, ...LANGUAGES],
+    [t]
+  );
+
+  const [translateWorkspace, setTranslateWorkspace] = useLocalStorage(
+    WORKSPACE_STORAGE_KEYS.translate,
+    { ...DEFAULT_TRANSLATE_WORKSPACE }
+  );
+
+  const {
+    text,
+    translatedText,
+    sourceLang,
+    targetLang,
+    lastProcessedText,
+    lastProcessedSettings,
+  } = translateWorkspace;
+
   const [isLoading, setIsLoading] = useState(false);
+  const [ttsSlot, setTtsSlot] = useState(null);
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
@@ -78,18 +98,30 @@ export const Translate = () => {
     try {
       const parsed = JSON.parse(savedSession);
       if (parsed?.type === 'TRANSLATE') {
-        setText(parsed.input || '');
-        setTranslatedText(parsed.output || '');
-        setSourceLang(parsed.sourceLang || 'auto');
-        setTargetLang(parsed.targetLang || 'English');
+        const nextText = parsed.input ?? '';
+        const nextOut = parsed.output ?? '';
+        const nextSrc = parsed.sourceLang ?? 'auto';
+        const nextTgt = parsed.targetLang ?? 'English';
+        const trimmedIn = nextText.trim();
+        const hasOut = Boolean(nextOut.trim());
+        setTranslateWorkspace({
+          ...DEFAULT_TRANSLATE_WORKSPACE,
+          text: nextText,
+          translatedText: nextOut,
+          sourceLang: nextSrc,
+          targetLang: nextTgt,
+          lastProcessedText: hasOut ? trimmedIn : '',
+          lastProcessedSettings: hasOut
+            ? { sourceLang: nextSrc, targetLang: nextTgt }
+            : null,
+        });
         localStorage.removeItem('restoreSession');
       }
     } catch (restoreError) {
       console.error('Failed to restore session data', restoreError);
     }
-  }, []);
+  }, [setTranslateWorkspace]);
 
-  // Перевірка автентифікації
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
@@ -105,24 +137,77 @@ export const Translate = () => {
     return () => synth.removeEventListener('voiceschanged', onVoices);
   }, []);
 
-  // Live translation with cache + debounce (prevents server overload while typing).
   useEffect(() => {
     const trimmedText = text.trim();
 
     if (!trimmedText) {
-      activeRequestId.current += 1; // invalidate any in-flight result
+      activeRequestId.current += 1;
       setIsLoading(false);
-      setTranslatedText('');
+      setTranslateWorkspace((prev) => {
+        if (
+          prev.translatedText === '' &&
+          (prev.lastProcessedText ?? '') === '' &&
+          prev.lastProcessedSettings == null
+        ) {
+          return prev;
+        }
+        return {
+          ...prev,
+          translatedText: '',
+          lastProcessedText: '',
+          lastProcessedSettings: null,
+        };
+      });
       return;
     }
 
-    // Unique cache key: text + source + target language
+    const lpText = (lastProcessedText ?? '').trim();
+    const outputExists = translatedText.trim() !== '';
+    const settingsMatch =
+      lastProcessedSettings &&
+      sourceLang === lastProcessedSettings.sourceLang &&
+      targetLang === lastProcessedSettings.targetLang;
+
+    if (trimmedText === lpText && settingsMatch && outputExists) {
+      setIsLoading(false);
+      return;
+    }
+
+    // Legacy snapshots without lastProcessed* — stamp once so tab switches do not refetch
+    if (
+      trimmedText &&
+      outputExists &&
+      lastProcessedSettings == null &&
+      lpText === ''
+    ) {
+      setIsLoading(false);
+      setTranslateWorkspace((prev) => ({
+        ...prev,
+        lastProcessedText: trimmedText,
+        lastProcessedSettings: { sourceLang, targetLang },
+      }));
+      return;
+    }
+
     const cacheKey = `${trimmedText}_${sourceLang}_${targetLang}`;
 
-    // Instant hit from cache (especially useful when user deletes/retypes)
     if (translationCache.current.has(cacheKey)) {
       setIsLoading(false);
-      setTranslatedText(translationCache.current.get(cacheKey));
+      const cached = translationCache.current.get(cacheKey);
+      setTranslateWorkspace((prev) =>
+        prev.translatedText === cached &&
+        (prev.lastProcessedText ?? '').trim() === trimmedText &&
+        prev.lastProcessedSettings &&
+        sourceLang === prev.lastProcessedSettings.sourceLang &&
+        targetLang === prev.lastProcessedSettings.targetLang
+          ? prev
+          : {
+              ...prev,
+              translatedText: cached,
+              lastProcessedText: trimmedText,
+              lastProcessedSettings: { sourceLang, targetLang },
+            }
+      );
       return;
     }
 
@@ -141,11 +226,15 @@ export const Translate = () => {
 
         const result = data?.translate?.outputResult ?? '';
 
-        // Ignore stale responses
         if (requestId !== activeRequestId.current) return;
 
         translationCache.current.set(cacheKey, result);
-        setTranslatedText(result);
+        setTranslateWorkspace((prev) => ({
+          ...prev,
+          translatedText: result,
+          lastProcessedText: trimmedText,
+          lastProcessedSettings: { sourceLang, targetLang },
+        }));
       } catch (translateError) {
         console.error('Translation Error:', translateError);
         if (requestId !== activeRequestId.current) return;
@@ -161,27 +250,28 @@ export const Translate = () => {
           translateError?.networkError?.status ??
           translateError?.networkError?.response?.status;
 
-        // Never show raw server error strings in UI (can break layout).
+        let message = t('translate.error_generic');
         if (
           status === 429 ||
           errorString.includes('429') ||
           errorString.includes('quota exceeded')
         ) {
-          setTranslatedText('⚠️ Мережева затримка. Перекладаю...');
-          return;
-        }
-
-        if (
+          message = t('translate.error_delay');
+        } else if (
           status === 503 ||
           errorString.includes('503') ||
           errorString.includes('service unavailable') ||
           errorString.includes('high demand')
         ) {
-          setTranslatedText('⏳ Сервери Google зараз перевантажені. Секундочку...');
-          return;
+          message = t('translate.error_busy');
         }
 
-        setTranslatedText('❌ Помилка перекладу. Спробуйте ще раз.');
+        setTranslateWorkspace((prev) => ({
+          ...prev,
+          translatedText: message,
+          lastProcessedText: trimmedText,
+          lastProcessedSettings: { sourceLang, targetLang },
+        }));
       } finally {
         if (requestId === activeRequestId.current) {
           setIsLoading(false);
@@ -190,7 +280,17 @@ export const Translate = () => {
     }, 350);
 
     return () => clearTimeout(timer);
-  }, [text, sourceLang, targetLang, translate]);
+  }, [
+    text,
+    translatedText,
+    sourceLang,
+    targetLang,
+    lastProcessedText,
+    lastProcessedSettings,
+    translate,
+    t,
+    setTranslateWorkspace,
+  ]);
 
   if (!isAuthenticated) {
     return null;
@@ -198,153 +298,207 @@ export const Translate = () => {
 
   const handleSwapLanguages = () => {
     if (sourceLang === 'auto') {
-      // Auto-detect isn't a concrete language to swap with.
-      // Promote current target to source and reset target to a sensible default.
-      setSourceLang(targetLang);
-      setTargetLang('English');
-      setText(translatedText || text);
-      setTranslatedText('');
+      setTranslateWorkspace((prev) => ({
+        ...prev,
+        sourceLang: prev.targetLang,
+        targetLang: 'English',
+        text: prev.translatedText || prev.text,
+        translatedText: '',
+        lastProcessedText: '',
+        lastProcessedSettings: null,
+      }));
       return;
     }
 
-    const nextSource = targetLang;
-    const nextTarget = sourceLang;
-    setSourceLang(nextSource);
-    setTargetLang(nextTarget);
-    setText(translatedText || text);
-    setTranslatedText('');
+    setTranslateWorkspace((prev) => ({
+      ...prev,
+      sourceLang: prev.targetLang,
+      targetLang: prev.sourceLang,
+      text: prev.translatedText || prev.text,
+      translatedText: '',
+      lastProcessedText: '',
+      lastProcessedSettings: null,
+    }));
   };
 
-  const textareaClass =
-    'min-h-0 flex-1 w-full resize-none rounded-xl border-0 bg-slate-50 p-4 pb-12 text-sm text-slate-900 outline-none ring-0 ring-offset-0 transition-shadow placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-teal-500/50 break-words overflow-x-hidden overflow-y-auto dark:bg-slate-950/50 dark:text-slate-200';
+  const clearWorkspace = () => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    setTtsSlot(null);
+    translationCache.current.clear();
+    activeRequestId.current += 1;
+    setIsLoading(false);
+    setTranslateWorkspace({ ...DEFAULT_TRANSLATE_WORKSPACE });
+  };
 
   const inputSpeechLang =
     sourceLang === 'auto' ? 'en-US' : getSpeechLanguage(sourceLang);
   const outputSpeechLang = getSpeechLanguage(targetLang);
 
+  const handleSpeak = (slot, rawText, lang) => {
+    const utterance = (rawText ?? '').trim();
+    if (!utterance || typeof window === 'undefined' || !window.speechSynthesis) return;
+
+    if (window.speechSynthesis.speaking && ttsSlot === slot) {
+      window.speechSynthesis.cancel();
+      setTtsSlot(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    setTtsSlot(null);
+
+    speakText(utterance, lang, {
+      onStart: () => setTtsSlot(slot),
+      onEnd: () => setTtsSlot(null),
+      onError: () => setTtsSlot(null),
+    });
+  };
+
+  const hasWorkspaceContent =
+    Boolean(text.trim()) ||
+    Boolean(translatedText.trim()) ||
+    sourceLang !== DEFAULT_TRANSLATE_WORKSPACE.sourceLang ||
+    targetLang !== DEFAULT_TRANSLATE_WORKSPACE.targetLang;
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden break-words p-4">
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
-        <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm dark:border dark:border-white/5 dark:bg-slate-900 dark:shadow-none">
-          <div className="shrink-0 border-b border-slate-100 px-3 py-2 dark:border-white/5">
-            <Label htmlFor="input-text" className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              Input
+    <div className="pait-page-stack">
+      <section className="pait-io-card">
+        <div className="pait-io-head">
+          <div className="pait-io-head-row">
+            <Label htmlFor="input-text" className="pait-io-label">
+              {t('translate.input')}
             </Label>
-          </div>
-          <div className="flex min-h-0 flex-1 flex-col p-3">
-            <div className="relative flex min-h-0 flex-1 flex-col">
-              <Textarea
-                id="input-text"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Type text…"
-                className={textareaClass}
-              />
-              <button
-                type="button"
-                onClick={() => speakText(text, inputSpeechLang)}
-                className="absolute bottom-3 right-3 z-10 rounded-full bg-white/90 p-2 text-slate-500 shadow-md backdrop-blur-sm transition-all hover:bg-slate-100 hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-slate-800/80 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-emerald-400"
-                title="Listen to text"
-                aria-label="Listen to input text"
-                disabled={!text.trim()}
-              >
-                <Volume2 className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-100 bg-white p-2 shadow-sm dark:border dark:border-white/5 dark:bg-slate-900 dark:shadow-none">
-          <div className="min-w-[7rem] flex-1">
-            <Select value={sourceLang} onValueChange={setSourceLang}>
-              <SelectTrigger
-                id="source-lang"
-                className="h-9 w-full rounded-xl border border-slate-100 bg-slate-50 text-sm text-slate-900 shadow-none ring-0 transition-shadow focus:ring-2 focus:ring-teal-500/50 dark:border-white/10 dark:bg-slate-950/50 dark:text-slate-200"
-              >
-                <SelectValue placeholder="From" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border border-slate-100 bg-white shadow-md dark:border-white/10 dark:bg-slate-900">
-                {LANGUAGES_WITH_AUTO.map((lang) => (
-                  <SelectItem
-                    key={lang.value}
-                    value={lang.value}
-                    className="text-slate-900 focus:bg-slate-100 dark:text-slate-200 dark:focus:bg-slate-800"
-                  >
-                    {lang.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleSwapLanguages}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-slate-50 text-slate-900 transition-colors hover:bg-slate-100/80 focus:outline-none focus:ring-2 focus:ring-teal-500/50 dark:border-white/10 dark:bg-slate-950/50 dark:text-slate-200 dark:hover:bg-slate-800/80"
-            aria-label="Swap languages"
-            title="Swap languages"
-          >
-            ⇄
-          </button>
-
-          <div className="min-w-[7rem] flex-1">
-            <Select value={targetLang} onValueChange={setTargetLang}>
-              <SelectTrigger
-                id="target-lang"
-                className="h-9 w-full rounded-xl border border-slate-100 bg-slate-50 text-sm text-slate-900 shadow-none ring-0 transition-shadow focus:ring-2 focus:ring-teal-500/50 dark:border-white/10 dark:bg-slate-950/50 dark:text-slate-200"
-              >
-                <SelectValue placeholder="To" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border border-slate-100 bg-white shadow-md dark:border-white/10 dark:bg-slate-900">
-                {LANGUAGES.map((lang) => (
-                  <SelectItem
-                    key={lang.value}
-                    value={lang.value}
-                    className="text-slate-900 focus:bg-slate-100 dark:text-slate-200 dark:focus:bg-slate-800"
-                  >
-                    {lang.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <button
+              type="button"
+              className="pait-io-clear-btn"
+              onClick={clearWorkspace}
+              disabled={!hasWorkspaceContent}
+              title={t('workspace.clear')}
+              aria-label={t('workspace.clear')}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
           </div>
         </div>
-
-        <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm dark:border dark:border-white/5 dark:bg-slate-900 dark:shadow-none">
-          <div className="shrink-0 border-b border-slate-100 px-3 py-2 dark:border-white/5">
-            <Label htmlFor="output-text" className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              Output
-            </Label>
-          </div>
-          <div className="flex min-h-0 flex-1 flex-col p-3">
-            <div className="relative flex min-h-0 flex-1 flex-col">
-              <Textarea
-                id="output-text"
-                value={isLoading ? '⏳ Translating...' : translatedText}
-                readOnly
-                placeholder="Translation…"
-                className={`${textareaClass} cursor-default ${
-                  isLoading ? 'animate-pulse text-slate-500' : 'text-slate-900 dark:text-slate-200'
-                }`}
-              />
-              <button
-                type="button"
-                onClick={() => speakText(translatedText, outputSpeechLang)}
-                className="absolute bottom-3 right-3 z-10 rounded-full bg-white/90 p-2 text-slate-500 shadow-md backdrop-blur-sm transition-all hover:bg-slate-100 hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-slate-800/80 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-emerald-400"
-                title="Listen to text"
-                aria-label="Listen to translated text"
-                disabled={isLoading || !translatedText.trim()}
-              >
+        <div className="pait-io-body">
+          <div className="pait-io-inner">
+            <Textarea
+              id="input-text"
+              value={text}
+              onChange={(e) =>
+                setTranslateWorkspace((prev) => ({ ...prev, text: e.target.value }))
+              }
+              placeholder={t('translate.placeholder_input')}
+              className="pait-textarea-io min-h-0 flex-1 overflow-x-hidden overflow-y-auto break-words focus-visible:ring-0 focus-visible:ring-offset-0"
+            />
+            <button
+              type="button"
+              onClick={() => handleSpeak('input', text, inputSpeechLang)}
+              className={`pait-icon-btn ${ttsSlot === 'input' ? 'pait-tts-playing' : ''}`}
+              title={ttsSlot === 'input' ? t('translate.stop') : t('translate.listen_input')}
+              aria-label={ttsSlot === 'input' ? t('translate.stop_speech') : t('translate.listen_input')}
+              disabled={!text.trim()}
+            >
+              {ttsSlot === 'input' ? (
+                <Square className="h-5 w-5 fill-current" />
+              ) : (
                 <Volume2 className="h-5 w-5" />
-              </button>
-            </div>
+              )}
+            </button>
           </div>
-        </section>
+        </div>
+      </section>
 
+      <div className="pait-toolbar">
+        <div className="pait-toolbar-slot">
+          <Select
+            value={sourceLang}
+            onValueChange={(v) =>
+              setTranslateWorkspace((prev) => ({ ...prev, sourceLang: v }))
+            }
+          >
+            <SelectTrigger id="source-lang" className="pait-select-trigger">
+              <SelectValue placeholder={t('translate.from')} />
+            </SelectTrigger>
+            <SelectContent className="pait-select-content">
+              {languagesWithAuto.map((lang) => (
+                <SelectItem key={lang.value} value={lang.value} className="pait-select-item">
+                  {lang.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleSwapLanguages}
+          className="pait-swap-btn"
+          aria-label={t('translate.swap')}
+          title={t('translate.swap')}
+        >
+          ⇄
+        </button>
+
+        <div className="pait-toolbar-slot">
+          <Select
+            value={targetLang}
+            onValueChange={(v) =>
+              setTranslateWorkspace((prev) => ({ ...prev, targetLang: v }))
+            }
+          >
+            <SelectTrigger id="target-lang" className="pait-select-trigger">
+              <SelectValue placeholder={t('translate.to')} />
+            </SelectTrigger>
+            <SelectContent className="pait-select-content">
+              {LANGUAGES.map((lang) => (
+                <SelectItem key={lang.value} value={lang.value} className="pait-select-item">
+                  {lang.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
+      <section className="pait-io-card">
+        <div className="pait-io-head">
+          <Label htmlFor="output-text" className="pait-io-label">
+            {t('translate.output')}
+          </Label>
+        </div>
+        <div className="pait-io-body">
+          <div className="pait-io-inner">
+            <Textarea
+              id="output-text"
+              value={isLoading ? `⏳ ${t('translate.translating')}` : translatedText}
+              readOnly
+              placeholder={t('translate.placeholder_output')}
+              className={`pait-textarea-io min-h-0 flex-1 cursor-default overflow-x-hidden overflow-y-auto break-words focus-visible:ring-0 focus-visible:ring-offset-0 ${
+                isLoading ? 'animate-pulse pait-textarea-io--muted' : ''
+              }`}
+            />
+            <button
+              type="button"
+              onClick={() => handleSpeak('output', translatedText, outputSpeechLang)}
+              className={`pait-icon-btn ${ttsSlot === 'output' ? 'pait-tts-playing' : ''}`}
+              title={ttsSlot === 'output' ? t('translate.stop') : t('translate.listen_output')}
+              aria-label={ttsSlot === 'output' ? t('translate.stop_speech') : t('translate.listen_output')}
+              disabled={isLoading || !translatedText.trim()}
+            >
+              {ttsSlot === 'output' ? (
+                <Square className="h-5 w-5 fill-current" />
+              ) : (
+                <Volume2 className="h-5 w-5" />
+              )}
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
 
 export default Translate;
-

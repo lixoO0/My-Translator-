@@ -7,15 +7,18 @@ import './index.css';
 import './App.css';
 import { apolloClient } from './apollo/client.js';
 import { AccessibilityProvider } from './context/AccessibilityContext.jsx';
+import { LanguageProvider } from './context/LanguageContext.jsx';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <ApolloProvider client={apolloClient}>
       <HashRouter>
-        <AccessibilityProvider>
-          <App />
-        </AccessibilityProvider>
+        <LanguageProvider>
+          <AccessibilityProvider>
+            <App />
+          </AccessibilityProvider>
+        </LanguageProvider>
       </HashRouter>
     </ApolloProvider>
   </React.StrictMode>

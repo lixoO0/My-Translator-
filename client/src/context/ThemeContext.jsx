@@ -24,6 +24,7 @@ export function ThemeProvider({ children }) {
 
   useLayoutEffect(() => {
     const root = document.documentElement;
+    root.dataset.theme = theme;
     if (theme === 'dark') {
       root.classList.add('dark');
     } else {

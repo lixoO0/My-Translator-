@@ -10,31 +10,26 @@ import {
   VERIFY_EMAIL,
 } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Pencil } from 'lucide-react';
 
-const cardClass =
-  'w-full max-w-md backdrop-blur-md bg-white/80 dark:bg-slate-950/80 rounded-2xl shadow-sm border border-slate-100 dark:border-white/5 p-6 sm:p-7';
-
-const labelClass = 'text-sm font-medium text-slate-700 dark:text-slate-200';
-const inputClass =
-  'mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition-shadow focus:ring-2 focus:ring-teal-500/50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100';
-
-const primaryButtonClass =
-  'w-full rounded-xl bg-teal-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60';
-
-const resetAccentSubmitClass =
-  'w-full rounded-lg bg-teal-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-teal-600 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60';
-
-const sendCodeButtonClass =
-  'w-full rounded-lg border-2 border-teal-500 bg-transparent px-4 py-3 text-sm font-semibold text-teal-600 shadow-none transition-all duration-200 hover:bg-teal-500/10 disabled:cursor-not-allowed disabled:opacity-60 dark:border-teal-400 dark:text-teal-400 dark:hover:bg-teal-400/10';
-
-const forgotPasswordLinkClass =
-  'inline-flex bg-transparent p-0 text-xs font-medium text-teal-600 shadow-none ring-0 transition-colors hover:text-teal-700 hover:underline dark:text-teal-400 dark:hover:text-teal-300';
+function inlineAlertClass(message) {
+  if (!message) return '';
+  if (
+    /надіслано|Надіслано|верифікації|sent to your email|verification|new code has been sent|code sent|successfully updated/i.test(
+      message
+    )
+  ) {
+    return 'pait-alert pait-alert--success';
+  }
+  return 'pait-alert pait-alert--error';
+}
 
 export const Auth = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useLanguage();
 
   const initialStep = useMemo(() => {
     if (location.pathname === '/register') return 'register';
@@ -110,7 +105,7 @@ export const Auth = () => {
 
   const [resendCode, resendState] = useMutation(RESEND_VERIFICATION_CODE, {
     onCompleted: ({ resendVerificationCode }) => {
-      setInlineError(resendVerificationCode?.message || 'Новий код надіслано');
+      setInlineError(resendVerificationCode?.message || t('auth.new_code_sent'));
     },
     onError: () => {},
   });
@@ -120,13 +115,13 @@ export const Auth = () => {
       setResetCodeSent(true);
       setResetBanner({
         variant: 'success',
-        text: fp?.message || 'Code sent to your email!',
+        text: fp?.message || t('auth.code_sent_email'),
       });
     },
     onError: (err) => {
       setResetBanner({
         variant: 'error',
-        text: err.message || 'Something went wrong',
+        text: err.message || t('auth.something_wrong'),
       });
     },
   });
@@ -142,13 +137,13 @@ export const Auth = () => {
       navigate('/login', { replace: true });
       setLoginBanner({
         variant: 'success',
-        text: rp?.message || 'Password updated successfully',
+        text: rp?.message || t('auth.password_updated'),
       });
     },
     onError: (err) => {
       setResetBanner({
         variant: 'error',
-        text: err.message.includes('Invalid') ? 'Invalid code' : err.message,
+        text: err.message.includes('Invalid') ? t('auth.validation_invalid_code') : err.message,
       });
     },
   });
@@ -159,11 +154,11 @@ export const Auth = () => {
     const code = (codeOverride ?? verifyCode ?? '').toString().replace(/[^\d]/g, '').slice(0, 6);
 
     if (!email) {
-      setInlineError('Вкажіть email для верифікації');
+      setInlineError(t('auth.validation_email_verify'));
       return;
     }
     if (code.length !== 6) {
-      setInlineError('Введіть 6-значний код');
+      setInlineError(t('auth.validation_code_6'));
       return;
     }
 
@@ -209,7 +204,7 @@ export const Auth = () => {
   const sendResetCode = () => {
     const email = resetEmail.trim().toLowerCase();
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-      setResetBanner({ variant: 'error', text: 'Enter a valid email address' });
+      setResetBanner({ variant: 'error', text: t('auth.validation_invalid_email') });
       return;
     }
     setResetBanner(null);
@@ -226,11 +221,11 @@ export const Auth = () => {
     const email = resetEmail.trim().toLowerCase();
     const code = resetCode.replace(/[^\d]/g, '').slice(0, 6);
     if (code.length !== 6) {
-      setResetBanner({ variant: 'error', text: 'Invalid code' });
+      setResetBanner({ variant: 'error', text: t('auth.validation_invalid_code') });
       return;
     }
     if (!resetNewPassword || resetNewPassword.length < 6) {
-      setResetBanner({ variant: 'error', text: 'Password must be at least 6 characters' });
+      setResetBanner({ variant: 'error', text: t('auth.validation_password_min') });
       return;
     }
     setResetBanner(null);
@@ -286,11 +281,11 @@ export const Auth = () => {
     resetPwdState.loading;
 
   return (
-    <section className="flex min-h-[calc(100vh-64px)] items-center justify-center bg-slate-50 px-4 py-10 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className={cardClass}>
+    <section className="pait-auth-screen">
+      <div className="pait-auth-card">
         {(authStep === 'login' || authStep === 'resetPassword') && (
           <>
-            <div className="overflow-hidden w-full">
+            <div className="pait-auth-slide-wrap w-full">
               <div
                 className="flex w-[200%] transition-transform duration-300 ease-out motion-reduce:transition-none"
                 style={{
@@ -298,32 +293,28 @@ export const Auth = () => {
                 }}
               >
                 <div className="w-1/2 shrink-0 pr-3 box-border">
-                  <div className="mb-6">
-                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Вхід</h1>
-                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                      Увійдіть, щоб продовжити роботу.
-                    </p>
-                  </div>
+                  <h1 className="pait-auth-heading">{t('auth.login_title')}</h1>
+                  <p className="pait-auth-lead">{t('auth.login_lead')}</p>
 
-                  <form onSubmit={submitLogin} className="space-y-4">
-                    <label className="block">
-                      <span className={labelClass}>Email або username</span>
+                  <form onSubmit={submitLogin} className="pait-auth-form">
+                    <label className="pait-auth-field">
+                      <span className="pait-auth-label">{t('auth.email_or_username')}</span>
                       <input
-                        className={inputClass}
+                        className="pait-auth-input"
                         type="text"
                         name="emailOrUsername"
                         value={loginForm.emailOrUsername}
                         onChange={(e) => setLoginForm((p) => ({ ...p, emailOrUsername: e.target.value }))}
-                        placeholder="you@example.com"
+                        placeholder={t('auth.placeholder_email')}
                         autoComplete="username"
                         required
                       />
                     </label>
 
-                    <label className="block">
-                      <span className={labelClass}>Пароль</span>
+                    <label className="pait-auth-field">
+                      <span className="pait-auth-label">{t('auth.password')}</span>
                       <input
-                        className={inputClass}
+                        className="pait-auth-input"
                         type="password"
                         name="password"
                         value={loginForm.password}
@@ -335,54 +326,50 @@ export const Auth = () => {
                     </label>
 
                     <div className="flex justify-end">
-                      <button type="button" className={forgotPasswordLinkClass} onClick={openResetPassword}>
-                        Forgot password?
+                      <button type="button" className="pait-auth-link pait-auth-link--right" onClick={openResetPassword}>
+                        {t('auth.forgot_password')}
                       </button>
                     </div>
 
                     {loginBanner?.variant === 'success' ? (
-                      <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">{loginBanner.text}</p>
+                      <p className="pait-alert pait-alert--success">{loginBanner.text}</p>
                     ) : null}
 
-                    {errorText ? <p className="text-sm text-rose-600 dark:text-rose-400">{errorText}</p> : null}
+                    {errorText && authStep === 'login' ? (
+                      <p className={inlineAlertClass(errorText)}>{errorText}</p>
+                    ) : null}
 
-                    <button className={primaryButtonClass} type="submit" disabled={isBusy}>
-                      {loginState.loading ? 'Входимо...' : 'Увійти'}
+                    <button className="pait-auth-submit" type="submit" disabled={loginState.loading}>
+                      {loginState.loading ? t('auth.sign_in_loading') : t('auth.sign_in')}
                     </button>
 
                     <button
                       type="button"
-                      className="w-full text-sm text-slate-500 transition-colors hover:text-slate-700 dark:hover:text-slate-300"
+                      className="pait-auth-link"
                       onClick={() => {
                         setInlineError('');
                         setAuthStep('register');
                         navigate('/register', { replace: true });
                       }}
                     >
-                      Немає акаунта? Зареєструватися
+                      {t('auth.no_account')}
                     </button>
                   </form>
                 </div>
 
                 <div className="w-1/2 shrink-0 pl-3 box-border">
-                  <div className="mb-6">
-                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                      Reset Password
-                    </h1>
-                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                      Ми надішлемо код на вашу пошту.
-                    </p>
-                  </div>
+                  <h1 className="pait-auth-heading">{t('auth.reset_title')}</h1>
+                  <p className="pait-auth-lead">{t('auth.reset_lead')}</p>
 
-                  <form onSubmit={handleResetPanelSubmit} className="space-y-4">
-                    <label className="block">
-                      <span className={labelClass}>Email</span>
+                  <form onSubmit={handleResetPanelSubmit} className="pait-auth-form">
+                    <label className="pait-auth-field">
+                      <span className="pait-auth-label">{t('auth.email')}</span>
                       <input
-                        className={inputClass}
+                        className="pait-auth-input"
                         type="email"
                         value={resetEmail}
                         onChange={(e) => setResetEmail(e.target.value)}
-                        placeholder="you@example.com"
+                        placeholder={t('auth.placeholder_email')}
                         autoComplete="email"
                         required
                       />
@@ -390,19 +377,19 @@ export const Auth = () => {
 
                     <button
                       type="button"
-                      className={sendCodeButtonClass}
+                      className="pait-auth-outline-btn"
                       onClick={submitForgotCode}
-                      disabled={isBusy || forgotState.loading}
+                      disabled={forgotState.loading}
                     >
-                      {forgotState.loading ? 'Sending...' : 'Send Code'}
+                      {forgotState.loading ? t('auth.send_code_loading') : t('auth.send_code')}
                     </button>
 
                     {resetCodeSent ? (
                       <>
-                        <label className="block animate-in fade-in duration-300">
-                          <span className={labelClass}>Code</span>
+                        <label className="pait-auth-field">
+                          <span className="pait-auth-label">{t('auth.code')}</span>
                           <input
-                            className={inputClass}
+                            className="pait-auth-input"
                             type="text"
                             inputMode="numeric"
                             autoComplete="one-time-code"
@@ -415,10 +402,10 @@ export const Auth = () => {
                           />
                         </label>
 
-                        <label className="block animate-in fade-in duration-300">
-                          <span className={labelClass}>New Password</span>
+                        <label className="pait-auth-field">
+                          <span className="pait-auth-label">{t('auth.new_password')}</span>
                           <input
-                            className={inputClass}
+                            className="pait-auth-input"
                             type="password"
                             value={resetNewPassword}
                             onChange={(e) => setResetNewPassword(e.target.value)}
@@ -428,8 +415,8 @@ export const Auth = () => {
                           />
                         </label>
 
-                        <button className={resetAccentSubmitClass} type="submit" disabled={isBusy}>
-                          {resetPwdState.loading ? 'Updating...' : 'Update Password'}
+                        <button className="pait-auth-submit" type="submit" disabled={resetPwdState.loading}>
+                          {resetPwdState.loading ? t('auth.update_password_loading') : t('auth.update_password')}
                         </button>
                       </>
                     ) : null}
@@ -438,20 +425,16 @@ export const Auth = () => {
                       <p
                         className={
                           resetBanner.variant === 'success'
-                            ? 'text-sm font-medium text-emerald-600 dark:text-emerald-400'
-                            : 'text-sm font-medium text-rose-600 dark:text-rose-400'
+                            ? 'pait-alert pait-alert--success'
+                            : 'pait-alert pait-alert--error'
                         }
                       >
                         {resetBanner.text}
                       </p>
                     ) : null}
 
-                    <button
-                      type="button"
-                      className="w-full text-sm text-slate-500 transition-colors hover:text-slate-700 dark:hover:text-slate-300"
-                      onClick={backToLoginFromReset}
-                    >
-                      Back to login
+                    <button type="button" className="pait-auth-link" onClick={backToLoginFromReset}>
+                      {t('auth.back_to_login')}
                     </button>
                   </form>
                 </div>
@@ -462,72 +445,68 @@ export const Auth = () => {
 
         {authStep === 'register' && (
           <>
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Реєстрація</h1>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Створіть акаунт і підтвердіть email кодом.
-              </p>
-            </div>
+            <h1 className="pait-auth-heading">{t('auth.register_title')}</h1>
+            <p className="pait-auth-lead">{t('auth.register_lead')}</p>
 
-            <form onSubmit={submitRegister} className="space-y-4">
-              <label className="block">
-                <span className={labelClass}>Username</span>
+            <form onSubmit={submitRegister} className="pait-auth-form">
+              <label className="pait-auth-field">
+                <span className="pait-auth-label">{t('auth.username')}</span>
                 <input
-                  className={inputClass}
+                  className="pait-auth-input"
                   type="text"
                   name="username"
                   value={registerForm.username}
                   onChange={(e) => setRegisterForm((p) => ({ ...p, username: e.target.value }))}
-                  placeholder="username"
+                  placeholder={t('auth.placeholder_username')}
                   autoComplete="username"
                   required
                 />
               </label>
 
-              <label className="block">
-                <span className={labelClass}>Email</span>
+              <label className="pait-auth-field">
+                <span className="pait-auth-label">{t('auth.email')}</span>
                 <input
-                  className={inputClass}
+                  className="pait-auth-input"
                   type="email"
                   name="email"
                   value={registerForm.email}
                   onChange={(e) => setRegisterForm((p) => ({ ...p, email: e.target.value }))}
-                  placeholder="you@example.com"
+                  placeholder={t('auth.placeholder_email')}
                   autoComplete="email"
                   required
                 />
               </label>
 
-              <label className="block">
-                <span className={labelClass}>Пароль</span>
+              <label className="pait-auth-field">
+                <span className="pait-auth-label">{t('auth.password')}</span>
                 <input
-                  className={inputClass}
+                  className="pait-auth-input"
                   type="password"
                   name="password"
                   value={registerForm.password}
                   onChange={(e) => setRegisterForm((p) => ({ ...p, password: e.target.value }))}
-                  placeholder="мінімум 6 символів"
+                  placeholder={t('auth.password_min_placeholder')}
                   autoComplete="new-password"
                   required
                 />
               </label>
 
-              {errorText ? <p className="text-sm text-rose-600 dark:text-rose-400">{errorText}</p> : null}
+              {errorText ? <p className={inlineAlertClass(errorText)}>{errorText}</p> : null}
 
-              <button className={primaryButtonClass} type="submit" disabled={isBusy}>
-                {registerState.loading ? 'Створюємо...' : 'Зареєструватися'}
+              <button className="pait-auth-submit" type="submit" disabled={registerState.loading}>
+                {registerState.loading ? t('auth.register_loading') : t('auth.register_btn')}
               </button>
 
               <button
                 type="button"
-                className="w-full text-sm text-slate-500 transition-colors hover:text-slate-700 dark:hover:text-slate-300"
+                className="pait-auth-link"
                 onClick={() => {
                   setInlineError('');
                   setAuthStep('login');
                   navigate('/login', { replace: true });
                 }}
               >
-                Вже є акаунт? Увійти
+                {t('auth.have_account')}
               </button>
             </form>
           </>
@@ -535,39 +514,38 @@ export const Auth = () => {
 
         {authStep === 'verify' && (
           <>
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                Перевірка пошти
-              </h1>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Ми надіслали 6-значний код на{' '}
-                <span className="font-medium text-slate-700 dark:text-slate-200">
-                  {emailForVerification || registerForm.email}
-                </span>{' '}
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 text-sm font-medium text-teal-500 underline-offset-2 transition-colors hover:text-teal-600 hover:underline"
-                  onClick={() => {
-                    setInlineError('');
-                    setVerifyCode('');
-                    setResendTimer(60);
-                    setEmailForVerification('');
-                    setAuthStep('register');
-                    navigate('/register', { replace: true });
-                  }}
-                >
+            <h1 className="pait-auth-heading">{t('auth.verify_title')}</h1>
+            <p className="pait-auth-lead">
+              {t('auth.verify_lead')}{' '}
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                {emailForVerification || registerForm.email}
+              </span>{' '}
+              <button
+                type="button"
+                className="pait-auth-link"
+                style={{ display: 'inline', width: 'auto', verticalAlign: 'baseline' }}
+                onClick={() => {
+                  setInlineError('');
+                  setVerifyCode('');
+                  setResendTimer(60);
+                  setEmailForVerification('');
+                  setAuthStep('register');
+                  navigate('/register', { replace: true });
+                }}
+              >
+                <span className="inline-flex items-center gap-1">
                   <Pencil className="h-4 w-4" />
-                  Змінити email
-                </button>
-                .
-              </p>
-            </div>
+                  {t('auth.change_email')}
+                </span>
+              </button>
+              .
+            </p>
 
-            <form onSubmit={submitVerify} className="space-y-4">
-              <label className="block">
-                <span className={labelClass}>Код</span>
+            <form onSubmit={submitVerify} className="pait-auth-form">
+              <label className="pait-auth-field">
+                <span className="pait-auth-label">{t('auth.code')}</span>
                 <input
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-2xl font-bold tracking-[1em] text-slate-900 outline-none transition-shadow focus:ring-2 focus:ring-teal-500/50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  className="pait-auth-input pait-auth-input--otp"
                   value={verifyCode}
                   onChange={(e) => {
                     const newCode = e.target.value.replace(/[^\d]/g, '').slice(0, 6);
@@ -584,26 +562,28 @@ export const Auth = () => {
                 />
               </label>
 
-              {errorText ? <p className="text-sm text-rose-600 dark:text-rose-400">{errorText}</p> : null}
+              {errorText ? <p className={inlineAlertClass(errorText)}>{errorText}</p> : null}
 
-              <button className={primaryButtonClass} type="submit" disabled={isBusy}>
-                {verifyState.loading ? 'Перевіряємо...' : 'Підтвердити'}
+              <button className="pait-auth-submit" type="submit" disabled={verifyState.loading}>
+                {verifyState.loading ? t('auth.confirm_loading') : t('auth.confirm')}
               </button>
 
               <div className="flex flex-col items-center gap-2 pt-1">
                 {resendTimer > 0 ? (
-                  <p className="text-sm text-slate-400">
-                    Надіслати код повторно через <span className="tabular-nums">{resendTimer}</span>с
+                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                    {t('auth.resend_in')}{' '}
+                    <span className="tabular-nums">{resendTimer}</span>{' '}
+                    {t('auth.sec_unit')}
                   </p>
                 ) : (
                   <button
                     type="button"
                     disabled={resendState.loading}
-                    className="text-sm font-medium text-teal-500 transition-colors hover:text-teal-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="pait-auth-link"
                     onClick={() => {
                       const email = (emailForVerification || registerForm.email || '').trim().toLowerCase();
                       if (!email) {
-                        setInlineError('Вкажіть email для повторної відправки коду');
+                        setInlineError(t('auth.validation_email_resend'));
                         return;
                       }
                       setInlineError('');
@@ -611,13 +591,13 @@ export const Auth = () => {
                       setResendTimer(60);
                     }}
                   >
-                    Не отримали код? Надіслати ще раз
+                    {t('auth.resend_btn')}
                   </button>
                 )}
 
                 <button
                   type="button"
-                  className="text-sm text-slate-500 transition-colors hover:text-slate-700 dark:hover:text-slate-300"
+                  className="pait-auth-link"
                   onClick={() => {
                     setInlineError('');
                     setVerifyCode('');
@@ -625,7 +605,7 @@ export const Auth = () => {
                     navigate('/login', { replace: true });
                   }}
                 >
-                  Повернутися до входу
+                  {t('auth.back_login')}
                 </button>
               </div>
             </form>

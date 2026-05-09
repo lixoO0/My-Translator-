@@ -1,15 +1,18 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation } from '@apollo/client/react';
 import { GET_HISTORY } from '../graphql/queries';
 import { DELETE_HISTORY_ITEM } from '../graphql/mutations';
-import { Copy, Trash2, Volume2, X } from 'lucide-react';
+import { Copy, Square, Trash2, Volume2, X } from 'lucide-react';
 import { speakText, warmupSpeechSynthesis } from '@/lib/speakText';
+import { useLanguage } from '../context/LanguageContext';
 
 export const HistoryModal = ({ isOpen = false, onClose, refreshTick = 0 }) => {
-  if (!isOpen) return null;
+  const { language, t } = useLanguage();
+  const [ttsPlayingId, setTtsPlayingId] = useState(null);
 
   const { data, loading, error, refetch } = useQuery(GET_HISTORY, {
-    fetchPolicy: 'network-only', // Завжди отримуємо свіжі дані
+    fetchPolicy: 'network-only',
+    skip: !isOpen,
   });
   const [deleteItem] = useMutation(DELETE_HISTORY_ITEM, {
     update(cache, { data: mutationData }) {
@@ -32,13 +35,14 @@ export const HistoryModal = ({ isOpen = false, onClose, refreshTick = 0 }) => {
   }, []);
 
   useEffect(() => {
-    if (!refreshTick) return;
+    if (!refreshTick || !isOpen) return;
     refetch?.().catch(() => {});
-  }, [refreshTick, refetch]);
+  }, [refreshTick, refetch, isOpen]);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
+    const locale = language === 'uk' ? 'uk-UA' : 'en-US';
+    return new Intl.DateTimeFormat(locale, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -77,18 +81,6 @@ export const HistoryModal = ({ isOpen = false, onClose, refreshTick = 0 }) => {
     }
   };
 
-  const handleContinue = (item) => {
-    const dataToRestore = {
-      type: item.actionType,
-      input: item.inputContent || '',
-      output: item.outputResult || '',
-      sourceLang: item.metaData?.sourceLang || 'auto',
-      targetLang: item.metaData?.targetLang || 'English',
-    };
-
-    localStorage.setItem('restoreSession', JSON.stringify(dataToRestore));
-  };
-
   const handleDelete = async (itemId) => {
     try {
       await deleteItem({
@@ -100,113 +92,125 @@ export const HistoryModal = ({ isOpen = false, onClose, refreshTick = 0 }) => {
     }
   };
 
+  const handleSpeakItem = (item) => {
+    const id = item.id;
+    const lang = item?.metaData?.targetLang || 'uk';
+    const raw = item.outputResult;
+    const utterance = (raw ?? '').trim();
+    if (!utterance || typeof window === 'undefined' || !window.speechSynthesis) return;
+
+    if (window.speechSynthesis.speaking && ttsPlayingId === id) {
+      window.speechSynthesis.cancel();
+      setTtsPlayingId(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    setTtsPlayingId(null);
+
+    speakText(utterance, lang, {
+      onStart: () => setTtsPlayingId(id),
+      onEnd: () => setTtsPlayingId(null),
+      onError: () => setTtsPlayingId(null),
+    });
+  };
+
   const bodyContent = (
-    <div className="space-y-4">
+    <div className="pait-history-stack">
       {loading && (
-        <div className="flex min-h-[40vh] items-center justify-center text-slate-500 animate-pulse">
-          Loading history...
-        </div>
+        <div className="pait-history-placeholder animate-pulse">{t('history.loading')}</div>
       )}
 
       {error && (
-        <div className="flex min-h-[40vh] items-center justify-center text-slate-500">
-          Failed to load history. Please try again.
-        </div>
+        <div className="pait-history-placeholder">{t('history.error')}</div>
       )}
 
       {!loading && !error && data && (
         <>
           {data.history.length === 0 ? (
-            <div className="flex min-h-[40vh] items-center justify-center text-slate-500">
-              No history yet.
-            </div>
+            <div className="pait-history-placeholder">{t('history.empty')}</div>
           ) : (
-            <div className="space-y-4">
-              {data.history.map((item) => {
-                const badgeText = getMetaBadge(item);
-                const dateLabel = item?.createdAt ? formatDate(item.createdAt) : '';
-                const outputLang = item?.metaData?.targetLang || 'uk';
+            data.history.map((item) => {
+              const badgeText = getMetaBadge(item);
+              const dateLabel = item?.createdAt ? formatDate(item.createdAt) : '';
 
-                return (
-                  <div
-                    key={item.id}
-                    className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:shadow-lg dark:hover:shadow-xl"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex flex-wrap items-center gap-2 min-w-0">
-                        <span className="inline-block rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                          {item.actionType}
-                        </span>
-                        {badgeText ? (
-                          <span className="inline-block rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                            {badgeText}
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <div className="text-xs text-slate-500 shrink-0">{dateLabel}</div>
+              return (
+                <div key={item.id} className="pait-history-card">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="pait-history-tags">
+                      <span className="pait-history-tag">{item.actionType}</span>
+                      {badgeText ? (
+                        <span className="pait-history-tag">{badgeText}</span>
+                      ) : null}
                     </div>
-
-                    <div className="whitespace-pre-wrap break-words text-sm text-slate-600 dark:text-slate-400">
-                      {truncateText(item.inputContent, 220)}
-                    </div>
-
-                    <div className="whitespace-pre-wrap break-words text-base font-medium text-slate-900 dark:text-slate-200">
-                      {truncateText(item.outputResult, 320)}
-                    </div>
-
-                    <div className="mt-2 flex justify-end gap-2 border-t border-slate-200/80 pt-2 dark:border-slate-800/50">
-                      <button
-                        type="button"
-                        onClick={() => copyToClipboard(item.outputResult)}
-                        className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
-                        title="Copy"
-                        aria-label="Copy"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => speakText(item.outputResult, outputLang)}
-                        className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
-                        title="Speak"
-                        aria-label="Speak"
-                        disabled={!item?.outputResult?.trim()}
-                      >
-                        <Volume2 className="h-4 w-4" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(item.id)}
-                        className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
-                        title="Delete"
-                        aria-label="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
+                    <div className="pait-history-date">{dateLabel}</div>
                   </div>
-                );
-              })}
-            </div>
+
+                  <p className="pait-history-input-preview">
+                    {truncateText(item.inputContent, 220)}
+                  </p>
+
+                  <p className="pait-history-output">
+                    {truncateText(item.outputResult, 320)}
+                  </p>
+
+                  <div className="pait-history-actions">
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(item.outputResult)}
+                      className="pait-history-icon-btn"
+                      title={t('history.copy')}
+                      aria-label={t('history.copy')}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSpeakItem(item)}
+                      className={`pait-history-icon-btn ${ttsPlayingId === item.id ? 'pait-tts-playing' : ''}`}
+                      title={ttsPlayingId === item.id ? t('translate.stop') : t('history.speak')}
+                      aria-label={ttsPlayingId === item.id ? t('translate.stop_speech') : t('history.speak')}
+                      disabled={!item?.outputResult?.trim()}
+                    >
+                      {ttsPlayingId === item.id ? (
+                        <Square className="h-4 w-4 fill-current" />
+                      ) : (
+                        <Volume2 className="h-4 w-4" />
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(item.id)}
+                      className="pait-history-icon-btn"
+                      title={t('history.delete')}
+                      aria-label={t('history.delete')}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
           )}
         </>
       )}
     </div>
   );
 
+  if (!isOpen) return null;
+
   return (
-    <div className="absolute inset-0 z-50 flex flex-col overflow-y-auto bg-slate-50 p-4 dark:bg-slate-950">
-      <div className="flex shrink-0 items-center justify-between gap-3 pb-4">
-        <h2 className="font-semibold text-slate-900 dark:text-slate-200">History</h2>
+    <div className="pait-history-root absolute inset-0 z-50 flex flex-col">
+      <div className="pait-history-header">
+        <h2 className="pait-history-title">{t('history.title')}</h2>
         <button
           type="button"
           onClick={onClose}
-          className="rounded-md p-2 text-slate-500 transition-colors hover:bg-slate-200 hover:text-emerald-600 dark:hover:bg-slate-900 dark:hover:text-emerald-400"
-          aria-label="Close history"
-          title="Close"
+          className="pait-history-close"
+          aria-label={t('history.close')}
+          title={t('history.close')}
         >
           <X className="h-5 w-5" />
         </button>
@@ -218,4 +222,3 @@ export const HistoryModal = ({ isOpen = false, onClose, refreshTick = 0 }) => {
 };
 
 export default HistoryModal;
-

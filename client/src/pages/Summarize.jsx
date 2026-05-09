@@ -2,23 +2,47 @@ import { useState, useEffect, useRef } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { SUMMARIZE_TEXT } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { Volume2 } from 'lucide-react';
+import { Square, Volume2, Trash2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { speakText, warmupSpeechSynthesis } from '@/lib/speakText';
+import { useLocalStorage, WORKSPACE_STORAGE_KEYS } from '@/hooks/useLocalStorage';
 
 const SUMMARY_SPEECH_LANG = {
   uk: 'uk-UA',
   en: 'en-US',
 };
 
+const DEFAULT_SUMMARIZE_WORKSPACE = Object.freeze({
+  text: '',
+  summarizedText: '',
+  summaryLang: 'uk',
+  summaryLength: 'short',
+  lastProcessedText: '',
+  lastProcessedSettings: null,
+});
+
 export const Summarize = () => {
-  const [text, setText] = useState('');
-  const [summarizedText, setSummarizedText] = useState('');
-  const [summaryLang, setSummaryLang] = useState('uk');
-  const [summaryLength, setSummaryLength] = useState('short');
+  const { t } = useLanguage();
+
+  const [summarizeWorkspace, setSummarizeWorkspace] = useLocalStorage(
+    WORKSPACE_STORAGE_KEYS.summarize,
+    { ...DEFAULT_SUMMARIZE_WORKSPACE }
+  );
+
+  const {
+    text,
+    summarizedText,
+    summaryLang,
+    summaryLength,
+    lastProcessedText,
+    lastProcessedSettings,
+  } = summarizeWorkspace;
+
   const [isLoading, setIsLoading] = useState(false);
+  const [ttsSlot, setTtsSlot] = useState(null);
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
@@ -34,16 +58,30 @@ export const Summarize = () => {
     try {
       const parsed = JSON.parse(savedSession);
       if (parsed?.type === 'SUMMARIZE') {
-        setText(parsed.input || '');
-        setSummarizedText(parsed.output || '');
+        const nextText = parsed.input ?? '';
+        const nextOut = parsed.output ?? '';
+        const nextLang = parsed.summaryLang ?? DEFAULT_SUMMARIZE_WORKSPACE.summaryLang;
+        const nextLen = parsed.summaryLength ?? DEFAULT_SUMMARIZE_WORKSPACE.summaryLength;
+        const trimmedIn = nextText.trim();
+        const hasOut = Boolean(nextOut.trim());
+        setSummarizeWorkspace({
+          ...DEFAULT_SUMMARIZE_WORKSPACE,
+          text: nextText,
+          summarizedText: nextOut,
+          summaryLang: nextLang,
+          summaryLength: nextLen,
+          lastProcessedText: hasOut ? trimmedIn : '',
+          lastProcessedSettings: hasOut
+            ? { summaryLang: nextLang, summaryLength: nextLen }
+            : null,
+        });
         localStorage.removeItem('restoreSession');
       }
     } catch (restoreError) {
       console.error('Failed to restore session data', restoreError);
     }
-  }, []);
+  }, [setSummarizeWorkspace]);
 
-  // Перевірка автентифікації
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
@@ -59,23 +97,75 @@ export const Summarize = () => {
     return () => synth.removeEventListener('voiceschanged', onVoices);
   }, []);
 
-  // Live summarize with cache + debounce.
   useEffect(() => {
     const trimmedText = text.trim();
 
     if (!trimmedText) {
       activeRequestId.current += 1;
       setIsLoading(false);
-      setSummarizedText('');
+      setSummarizeWorkspace((prev) => {
+        if (
+          prev.summarizedText === '' &&
+          (prev.lastProcessedText ?? '') === '' &&
+          prev.lastProcessedSettings == null
+        ) {
+          return prev;
+        }
+        return {
+          ...prev,
+          summarizedText: '',
+          lastProcessedText: '',
+          lastProcessedSettings: null,
+        };
+      });
       return;
     }
 
-    // Include language in cache key to avoid returning summaries in the wrong language
-    // when user switches the language selector.
+    const lpText = (lastProcessedText ?? '').trim();
+    const outputExists = summarizedText.trim() !== '';
+    const settingsMatch =
+      lastProcessedSettings &&
+      summaryLang === lastProcessedSettings.summaryLang &&
+      summaryLength === lastProcessedSettings.summaryLength;
+
+    if (trimmedText === lpText && settingsMatch && outputExists) {
+      setIsLoading(false);
+      return;
+    }
+
+    if (
+      trimmedText &&
+      outputExists &&
+      lastProcessedSettings == null &&
+      lpText === ''
+    ) {
+      setIsLoading(false);
+      setSummarizeWorkspace((prev) => ({
+        ...prev,
+        lastProcessedText: trimmedText,
+        lastProcessedSettings: { summaryLang, summaryLength },
+      }));
+      return;
+    }
+
     const cacheKey = `${trimmedText}_${summaryLength}_${summaryLang}`;
     if (summaryCache.current.has(cacheKey)) {
       setIsLoading(false);
-      setSummarizedText(summaryCache.current.get(cacheKey));
+      const cached = summaryCache.current.get(cacheKey);
+      setSummarizeWorkspace((prev) =>
+        prev.summarizedText === cached &&
+        (prev.lastProcessedText ?? '').trim() === trimmedText &&
+        prev.lastProcessedSettings &&
+        summaryLang === prev.lastProcessedSettings.summaryLang &&
+        summaryLength === prev.lastProcessedSettings.summaryLength
+          ? prev
+          : {
+              ...prev,
+              summarizedText: cached,
+              lastProcessedText: trimmedText,
+              lastProcessedSettings: { summaryLang, summaryLength },
+            }
+      );
       return;
     }
 
@@ -96,11 +186,21 @@ export const Summarize = () => {
         if (requestId !== activeRequestId.current) return;
 
         summaryCache.current.set(cacheKey, result);
-        setSummarizedText(result);
+        setSummarizeWorkspace((prev) => ({
+          ...prev,
+          summarizedText: result,
+          lastProcessedText: trimmedText,
+          lastProcessedSettings: { summaryLang, summaryLength },
+        }));
       } catch (summarizeError) {
         console.error('Summarization Error:', summarizeError);
         if (requestId !== activeRequestId.current) return;
-        setSummarizedText('❌ Помилка сумаризації. Спробуйте ще раз.');
+        setSummarizeWorkspace((prev) => ({
+          ...prev,
+          summarizedText: t('summarize.error_generic'),
+          lastProcessedText: trimmedText,
+          lastProcessedSettings: { summaryLang, summaryLength },
+        }));
       } finally {
         if (requestId === activeRequestId.current) {
           setIsLoading(false);
@@ -109,111 +209,177 @@ export const Summarize = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [text, summaryLength, summaryLang, summarize]);
+  }, [
+    text,
+    summarizedText,
+    summaryLength,
+    summaryLang,
+    lastProcessedText,
+    lastProcessedSettings,
+    summarize,
+    t,
+    setSummarizeWorkspace,
+  ]);
 
   if (!isAuthenticated) {
     return null;
   }
 
-  const textareaClass =
-    'min-h-0 flex-1 w-full resize-none rounded-xl border-0 bg-slate-50 p-4 pb-12 text-sm text-slate-900 outline-none ring-0 ring-offset-0 transition-shadow placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-teal-500/50 break-words overflow-x-hidden overflow-y-auto dark:bg-slate-950/50 dark:text-slate-200';
-
   const summarySpeechLang = SUMMARY_SPEECH_LANG[summaryLang] || 'en-US';
 
+  const handleSpeak = (slot, rawText, lang) => {
+    const utterance = (rawText ?? '').trim();
+    if (!utterance || typeof window === 'undefined' || !window.speechSynthesis) return;
+
+    if (window.speechSynthesis.speaking && ttsSlot === slot) {
+      window.speechSynthesis.cancel();
+      setTtsSlot(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    setTtsSlot(null);
+
+    speakText(utterance, lang, {
+      onStart: () => setTtsSlot(slot),
+      onEnd: () => setTtsSlot(null),
+      onError: () => setTtsSlot(null),
+    });
+  };
+
+  const clearWorkspace = () => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    setTtsSlot(null);
+    summaryCache.current.clear();
+    activeRequestId.current += 1;
+    setIsLoading(false);
+    setSummarizeWorkspace({ ...DEFAULT_SUMMARIZE_WORKSPACE });
+  };
+
+  const hasWorkspaceContent =
+    Boolean(text.trim()) ||
+    Boolean(summarizedText.trim()) ||
+    summaryLang !== DEFAULT_SUMMARIZE_WORKSPACE.summaryLang ||
+    summaryLength !== DEFAULT_SUMMARIZE_WORKSPACE.summaryLength;
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden break-words p-4">
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
-        <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm dark:border dark:border-white/5 dark:bg-slate-900 dark:shadow-none">
-          <div className="shrink-0 border-b border-slate-100 px-3 py-2 dark:border-white/5">
-            <Label htmlFor="input-text" className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              Input
+    <div className="pait-page-stack">
+      <section className="pait-io-card">
+        <div className="pait-io-head">
+          <div className="pait-io-head-row">
+            <Label htmlFor="input-text" className="pait-io-label">
+              {t('summarize.input')}
             </Label>
+            <button
+              type="button"
+              className="pait-io-clear-btn"
+              onClick={clearWorkspace}
+              disabled={!hasWorkspaceContent}
+              title={t('workspace.clear')}
+              aria-label={t('workspace.clear')}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
           </div>
-          <div className="flex min-h-0 flex-1 flex-col p-3">
-            <div className="relative flex min-h-0 flex-1 flex-col">
-              <Textarea
-                id="input-text"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Type text…"
-                className={textareaClass}
-              />
-              <button
-                type="button"
-                onClick={() => speakText(text, summarySpeechLang)}
-                className="absolute bottom-3 right-3 z-10 rounded-full bg-white/90 p-2 text-slate-500 shadow-md backdrop-blur-sm transition-all hover:bg-slate-100 hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-slate-800/80 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-emerald-400"
-                title="Listen to text"
-                aria-label="Listen to input text"
-                disabled={!text.trim()}
-              >
+        </div>
+        <div className="pait-io-body">
+          <div className="pait-io-inner">
+            <Textarea
+              id="input-text"
+              value={text}
+              onChange={(e) =>
+                setSummarizeWorkspace((prev) => ({ ...prev, text: e.target.value }))
+              }
+              placeholder={t('summarize.placeholder_input')}
+              className="pait-textarea-io min-h-0 flex-1 overflow-x-hidden overflow-y-auto break-words focus-visible:ring-0 focus-visible:ring-offset-0"
+            />
+            <button
+              type="button"
+              onClick={() => handleSpeak('input', text, summarySpeechLang)}
+              className={`pait-icon-btn ${ttsSlot === 'input' ? 'pait-tts-playing' : ''}`}
+              title={ttsSlot === 'input' ? t('translate.stop') : t('translate.listen_input')}
+              aria-label={ttsSlot === 'input' ? t('translate.stop_speech') : t('translate.listen_input')}
+              disabled={!text.trim()}
+            >
+              {ttsSlot === 'input' ? (
+                <Square className="h-5 w-5 fill-current" />
+              ) : (
                 <Volume2 className="h-5 w-5" />
-              </button>
-            </div>
+              )}
+            </button>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-100 bg-white p-2 shadow-sm dark:border dark:border-white/5 dark:bg-slate-900 dark:shadow-none">
-          <div className="min-w-[7rem] flex-1">
-            <select
-              id="summary-lang"
-              value={summaryLang}
-              onChange={(e) => setSummaryLang(e.target.value)}
-              className="h-9 w-full rounded-xl border border-slate-100 bg-slate-50 px-2 text-sm text-slate-900 outline-none transition-shadow focus:border-teal-500/30 focus:ring-2 focus:ring-teal-500/50 dark:border-white/10 dark:bg-slate-950/50 dark:text-slate-200"
-            >
-              <option value="uk">Ukrainian</option>
-              <option value="en">English</option>
-            </select>
-          </div>
-
-          <div className="min-w-[7rem] flex-1">
-            <select
-              id="summary-length"
-              value={summaryLength}
-              onChange={(e) => setSummaryLength(e.target.value)}
-              className="h-9 w-full rounded-xl border border-slate-100 bg-slate-50 px-2 text-sm text-slate-900 outline-none transition-shadow focus:border-teal-500/30 focus:ring-2 focus:ring-teal-500/50 dark:border-white/10 dark:bg-slate-950/50 dark:text-slate-200"
-            >
-              <option value="short">Short</option>
-              <option value="medium">Medium</option>
-              <option value="long">Long</option>
-            </select>
-          </div>
-
+      <div className="pait-toolbar">
+        <div className="pait-toolbar-slot">
+          <select
+            id="summary-lang"
+            value={summaryLang}
+            onChange={(e) =>
+              setSummarizeWorkspace((prev) => ({ ...prev, summaryLang: e.target.value }))
+            }
+            className="pait-native-select"
+          >
+            <option value="uk">{t('summarize.lang_uk')}</option>
+            <option value="en">{t('summarize.lang_en')}</option>
+          </select>
         </div>
 
-        <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm dark:border dark:border-white/5 dark:bg-slate-900 dark:shadow-none">
-          <div className="shrink-0 border-b border-slate-100 px-3 py-2 dark:border-white/5">
-            <Label htmlFor="output-text" className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              Output
-            </Label>
-          </div>
-          <div className="flex min-h-0 flex-1 flex-col p-3">
-            <div className="relative flex min-h-0 flex-1 flex-col">
-              <Textarea
-                id="output-text"
-                value={isLoading ? '⏳ Summarizing...' : summarizedText}
-                readOnly
-                placeholder="Summary…"
-                className={`${textareaClass} cursor-default ${
-                  isLoading ? 'animate-pulse text-slate-500' : 'text-slate-900 dark:text-slate-200'
-                }`}
-              />
-              <button
-                type="button"
-                onClick={() => speakText(summarizedText, summarySpeechLang)}
-                className="absolute bottom-3 right-3 z-10 rounded-full bg-white/90 p-2 text-slate-500 shadow-md backdrop-blur-sm transition-all hover:bg-slate-100 hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-slate-800/80 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-emerald-400"
-                title="Listen to text"
-                aria-label="Listen to summary"
-                disabled={isLoading || !summarizedText.trim()}
-              >
-                <Volume2 className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-        </section>
+        <div className="pait-toolbar-slot">
+          <select
+            id="summary-length"
+            value={summaryLength}
+            onChange={(e) =>
+              setSummarizeWorkspace((prev) => ({ ...prev, summaryLength: e.target.value }))
+            }
+            className="pait-native-select"
+          >
+            <option value="short">{t('summarize.len_short')}</option>
+            <option value="medium">{t('summarize.len_medium')}</option>
+            <option value="long">{t('summarize.len_long')}</option>
+          </select>
+        </div>
       </div>
+
+      <section className="pait-io-card">
+        <div className="pait-io-head">
+          <Label htmlFor="output-text" className="pait-io-label">
+            {t('summarize.output')}
+          </Label>
+        </div>
+        <div className="pait-io-body">
+          <div className="pait-io-inner">
+            <Textarea
+              id="output-text"
+              value={isLoading ? `⏳ ${t('summarize.summarizing')}` : summarizedText}
+              readOnly
+              placeholder={t('summarize.placeholder_output')}
+              className={`pait-textarea-io min-h-0 flex-1 cursor-default overflow-x-hidden overflow-y-auto break-words focus-visible:ring-0 focus-visible:ring-offset-0 ${
+                isLoading ? 'animate-pulse pait-textarea-io--muted' : ''
+              }`}
+            />
+            <button
+              type="button"
+              onClick={() => handleSpeak('output', summarizedText, summarySpeechLang)}
+              className={`pait-icon-btn ${ttsSlot === 'output' ? 'pait-tts-playing' : ''}`}
+              title={ttsSlot === 'output' ? t('translate.stop') : t('translate.listen')}
+              aria-label={ttsSlot === 'output' ? t('translate.stop_speech') : t('translate.listen')}
+              disabled={isLoading || !summarizedText.trim()}
+            >
+              {ttsSlot === 'output' ? (
+                <Square className="h-5 w-5 fill-current" />
+              ) : (
+                <Volume2 className="h-5 w-5" />
+              )}
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
 
 export default Summarize;
-

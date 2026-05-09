@@ -3,6 +3,7 @@ import { useMutation } from '@apollo/client/react';
 import { useNavigate } from 'react-router-dom';
 import { FORGOT_PASSWORD, LOGIN_USER, RESET_PASSWORD } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const initialLoginState = {
   emailOrUsername: '',
@@ -10,6 +11,7 @@ const initialLoginState = {
 };
 
 export const Login = () => {
+  const { t } = useLanguage();
   const [mode, setMode] = useState('login');
   const [loginForm, setLoginForm] = useState(initialLoginState);
   const [resetEmail, setResetEmail] = useState('');
@@ -34,13 +36,13 @@ export const Login = () => {
       setResetCodeSent(true);
       setResetBanner({
         variant: 'success',
-        text: fp?.message || 'Code sent to your email!',
+        text: fp?.message || t('auth.code_sent_email'),
       });
     },
     onError: (err) => {
       setResetBanner({
         variant: 'error',
-        text: err.message || 'Something went wrong',
+        text: err.message || t('auth.something_wrong'),
       });
     },
   });
@@ -55,13 +57,13 @@ export const Login = () => {
       setMode('login');
       setLoginBanner({
         variant: 'success',
-        text: rp?.message || 'Password updated successfully',
+        text: rp?.message || t('auth.password_updated'),
       });
     },
     onError: (err) => {
       setResetBanner({
         variant: 'error',
-        text: err.message.includes('Invalid') ? 'Invalid code' : err.message,
+        text: err.message.includes('Invalid') ? t('auth.validation_invalid_code') : err.message,
       });
     },
   });
@@ -97,7 +99,7 @@ export const Login = () => {
   const sendResetCode = () => {
     const email = resetEmail.trim().toLowerCase();
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-      setResetBanner({ variant: 'error', text: 'Enter a valid email address' });
+      setResetBanner({ variant: 'error', text: t('auth.validation_invalid_email') });
       return;
     }
     setResetBanner(null);
@@ -113,11 +115,11 @@ export const Login = () => {
     const email = resetEmail.trim().toLowerCase();
     const code = resetCode.replace(/[^\d]/g, '').slice(0, 6);
     if (code.length !== 6) {
-      setResetBanner({ variant: 'error', text: 'Invalid code' });
+      setResetBanner({ variant: 'error', text: t('auth.validation_invalid_code') });
       return;
     }
     if (!resetNewPassword || resetNewPassword.length < 6) {
-      setResetBanner({ variant: 'error', text: 'Password must be at least 6 characters' });
+      setResetBanner({ variant: 'error', text: t('auth.validation_password_min') });
       return;
     }
     setResetBanner(null);
@@ -134,15 +136,15 @@ export const Login = () => {
             className={`auth-panels-track ${mode === 'reset' ? 'auth-panels-track--reset' : ''}`}
           >
             <div className="auth-panel">
-              <h1 className="auth-title">Login</h1>
+              <h1 className="auth-title">{t('auth.login_title')}</h1>
 
               <form className="auth-form" onSubmit={handleLoginSubmit}>
                 <label>
-                  Email or username
+                  {t('auth.email_or_username')}
                   <input
                     type="text"
                     name="emailOrUsername"
-                    placeholder="Email or username"
+                    placeholder={t('auth.email_or_username')}
                     value={loginForm.emailOrUsername}
                     onChange={handleLoginChange}
                     required
@@ -150,11 +152,11 @@ export const Login = () => {
                 </label>
 
                 <label>
-                  Password
+                  {t('auth.password')}
                   <input
                     type="password"
                     name="password"
-                    placeholder="Password"
+                    placeholder={t('auth.password')}
                     value={loginForm.password}
                     onChange={handleLoginChange}
                     required
@@ -163,7 +165,7 @@ export const Login = () => {
 
                 <div className="auth-links">
                   <button type="button" className="auth-link-forgot" onClick={openReset}>
-                    Forgot password?
+                    {t('auth.forgot_password')}
                   </button>
                 </div>
 
@@ -171,8 +173,8 @@ export const Login = () => {
                   <p className="auth-status auth-status--success">{loginBanner.text}</p>
                 ) : null}
 
-                <button className="auth-submit" type="submit" disabled={busy}>
-                  {loading ? 'Logging in...' : 'Login'}
+                <button className="auth-submit" type="submit" disabled={loading}>
+                  {loading ? t('auth.sign_in_loading') : t('auth.sign_in')}
                 </button>
               </form>
 
@@ -180,14 +182,14 @@ export const Login = () => {
             </div>
 
             <div className="auth-panel">
-              <h1 className="auth-title">Reset Password</h1>
+              <h1 className="auth-title">{t('auth.reset_title')}</h1>
 
               <form className="auth-form" onSubmit={handleResetPanelSubmit}>
                 <label>
-                  Email
+                  {t('auth.email')}
                   <input
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder={t('auth.placeholder_email')}
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
                     autoComplete="email"
@@ -202,15 +204,15 @@ export const Login = () => {
                     e.preventDefault();
                     sendResetCode();
                   }}
-                  disabled={busy}
+                  disabled={forgotLoading}
                 >
-                  {forgotLoading ? 'Sending...' : 'Send Code'}
+                  {forgotLoading ? t('auth.send_code_loading') : t('auth.send_code')}
                 </button>
 
                 {resetCodeSent ? (
                   <>
                     <label>
-                      Code
+                      {t('auth.code')}
                       <input
                         type="text"
                         inputMode="numeric"
@@ -225,10 +227,10 @@ export const Login = () => {
                     </label>
 
                     <label>
-                      New Password
+                      {t('auth.new_password')}
                       <input
                         type="password"
-                        placeholder="New password"
+                        placeholder={t('auth.new_password')}
                         value={resetNewPassword}
                         onChange={(e) => setResetNewPassword(e.target.value)}
                         autoComplete="new-password"
@@ -236,8 +238,8 @@ export const Login = () => {
                       />
                     </label>
 
-                    <button className="auth-submit-reset" type="submit" disabled={busy}>
-                      {resetLoading ? 'Updating...' : 'Update Password'}
+                    <button className="auth-submit-reset" type="submit" disabled={resetLoading}>
+                      {resetLoading ? t('auth.update_password_loading') : t('auth.update_password')}
                     </button>
                   </>
                 ) : null}
@@ -259,7 +261,7 @@ export const Login = () => {
                     setResetCodeSent(false);
                   }}
                 >
-                  Back to login
+                  {t('auth.back_to_login')}
                 </button>
               </form>
             </div>
