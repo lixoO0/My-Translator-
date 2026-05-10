@@ -32,6 +32,15 @@ export function removeStoredKey(key) {
   }
 }
 
+/** Session handoff between routes (Translate/Summarize); must not survive logout. */
+export const RESTORE_SESSION_KEY = 'restoreSession';
+
+/** User-owned persisted UI state only — not theme/language/accessibility. */
+export function clearUserWorkspaceStorage() {
+  Object.values(WORKSPACE_STORAGE_KEYS).forEach(removeStoredKey);
+  removeStoredKey(RESTORE_SESSION_KEY);
+}
+
 function mergeRecord(stored, defaultValue) {
   if (
     stored !== null &&

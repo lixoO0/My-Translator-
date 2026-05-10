@@ -15,7 +15,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useLocalStorage, WORKSPACE_STORAGE_KEYS } from '@/hooks/useLocalStorage';
+import {
+  useLocalStorage,
+  WORKSPACE_STORAGE_KEYS,
+  RESTORE_SESSION_KEY,
+} from '@/hooks/useLocalStorage';
 
 const LANGUAGES = [
   { value: 'English', label: 'English' },
@@ -92,7 +96,7 @@ export const Translate = () => {
   const [translate] = useMutation(TRANSLATE_TEXT);
 
   useEffect(() => {
-    const savedSession = localStorage.getItem('restoreSession');
+    const savedSession = localStorage.getItem(RESTORE_SESSION_KEY);
     if (!savedSession) return;
 
     try {
@@ -115,7 +119,7 @@ export const Translate = () => {
             ? { sourceLang: nextSrc, targetLang: nextTgt }
             : null,
         });
-        localStorage.removeItem('restoreSession');
+        localStorage.removeItem(RESTORE_SESSION_KEY);
       }
     } catch (restoreError) {
       console.error('Failed to restore session data', restoreError);

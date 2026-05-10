@@ -8,7 +8,11 @@ import { Square, Volume2, Trash2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { speakText, warmupSpeechSynthesis } from '@/lib/speakText';
-import { useLocalStorage, WORKSPACE_STORAGE_KEYS } from '@/hooks/useLocalStorage';
+import {
+  useLocalStorage,
+  WORKSPACE_STORAGE_KEYS,
+  RESTORE_SESSION_KEY,
+} from '@/hooks/useLocalStorage';
 
 const SUMMARY_SPEECH_LANG = {
   uk: 'uk-UA',
@@ -52,7 +56,7 @@ export const Summarize = () => {
   const [summarize] = useMutation(SUMMARIZE_TEXT);
 
   useEffect(() => {
-    const savedSession = localStorage.getItem('restoreSession');
+    const savedSession = localStorage.getItem(RESTORE_SESSION_KEY);
     if (!savedSession) return;
 
     try {
@@ -75,7 +79,7 @@ export const Summarize = () => {
             ? { summaryLang: nextLang, summaryLength: nextLen }
             : null,
         });
-        localStorage.removeItem('restoreSession');
+        localStorage.removeItem(RESTORE_SESSION_KEY);
       }
     } catch (restoreError) {
       console.error('Failed to restore session data', restoreError);

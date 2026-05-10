@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { clearUserWorkspaceStorage } from '../hooks/useLocalStorage';
 
 const AuthContext = createContext(null);
 
@@ -49,6 +50,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(AUTH_USER_KEY);
+    clearUserWorkspaceStorage();
     if (typeof chrome !== 'undefined' && chrome.storage) {
       chrome.storage.local.remove('authToken');
     }

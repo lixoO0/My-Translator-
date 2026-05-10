@@ -224,6 +224,10 @@ body::before {
 
 .pait-nav-tab {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
   border: 1px solid transparent;
   border-radius: 999px;
   padding: 0.45rem 0.85rem;
@@ -235,6 +239,12 @@ body::before {
   cursor: pointer;
   transition: var(--transition-pait);
   white-space: nowrap;
+}
+
+.pait-nav-tab-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
 }
 
 a.pait-nav-tab:hover,
@@ -320,9 +330,39 @@ button.pait-nav-tab:hover {
   color: var(--text-secondary);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .pait-nav-greeting {
     display: inline;
+  }
+}
+
+/* Компактна навігація: лише іконки, без горизонтального скролу де можливо */
+@media (max-width: 550px) {
+  .nav-text {
+    display: none;
+  }
+
+  .pait-nav-greeting {
+    display: none !important;
+  }
+
+  .pait-nav-row {
+    gap: 0.35rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .pait-nav-tab {
+    padding: 8px;
+    justify-content: center;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    box-sizing: border-box;
+  }
+
+  .pait-nav-actions {
+    gap: 0.35rem;
+    padding-left: 0.35rem;
   }
 }
 
