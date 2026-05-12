@@ -14,10 +14,220 @@
   pointer-events: auto;
 }
 
-/* Ручка перетягування для великого вікна результату (Translate / Summarize) */
-#pait-inline-result .pait-inline-toolbar {
+/* =============================================================================
+   Inline result — преміальна картка (rounded-2xl, shadow-2xl, шапка + body)
+   ============================================================================= */
+
+#pait-inline-result.pait-inline-card {
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid #334155;
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.55),
+    0 12px 24px -8px rgba(0, 0, 0, 0.35);
+  padding: 0 !important;
+  background: #0f172a;
+}
+
+#pait-inline-result.pait-inline-card.pait-light {
+  border-color: #e2e8f0;
+  box-shadow:
+    0 25px 50px -12px rgba(15, 23, 42, 0.2),
+    0 12px 24px -8px rgba(15, 23, 42, 0.1);
+  background: #ffffff;
+}
+
+/* Шапка (селекти + закриття) — окремий фон, компактний padding */
+#pait-inline-result .pait-inline-card__header.pait-inline-toolbar {
   cursor: grab;
   flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.75);
+  background: rgba(15, 23, 42, 0.88);
+}
+
+#pait-inline-result.pait-light .pait-inline-card__header.pait-inline-toolbar {
+  border-bottom-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+/* Основний блок тексту */
+#pait-inline-result .pait-inline-card__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  background: #1e293b;
+}
+
+#pait-inline-result.pait-light .pait-inline-card__body {
+  background: #ffffff;
+}
+
+#pait-inline-result .pait-inline-columns {
+  display: flex;
+  flex: 1;
+  gap: 16px;
+  min-height: 120px;
+  min-width: 0;
+}
+
+#pait-inline-result .pait-inline-card__body > .pait-inline-textarea {
+  flex: 1;
+  min-height: 120px;
+  width: 100%;
+  min-width: 0;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  font-family: sans-serif;
+  line-height: 1.55;
+}
+
+#pait-inline-result .pait-inline-card__header .pait-inline-select {
+  background: #0f172a;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  font-size: 12px;
+  outline: none;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+#pait-inline-result.pait-light .pait-inline-card__header .pait-inline-select {
+  background: #ffffff;
+  color: #334155;
+  border-color: #e2e8f0;
+}
+
+#pait-inline-result .pait-inline-close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+#pait-inline-result .pait-inline-close:hover {
+  background: rgba(148, 163, 184, 0.12);
+  color: #e2e8f0;
+}
+
+#pait-inline-result.pait-light .pait-inline-close {
+  color: #64748b;
+}
+
+#pait-inline-result.pait-light .pait-inline-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Summarize: ряд заголовка + селектів */
+#pait-inline-result .pait-inline-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+#pait-inline-result .pait-inline-summary-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#pait-inline-result .pait-inline-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+#pait-inline-result.pait-light .pait-inline-label {
+  color: #64748b !important;
+}
+
+/* Sparkles ≈ Lucide, золотистий акцент AI */
+#pait-inline-result .pait-inline-sparkles-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #eab308;
+}
+
+#pait-inline-result:not(.pait-light) .pait-inline-sparkles-icon {
+  color: #fbbf24;
+}
+
+#pait-inline-result .pait-inline-divider {
+  width: 1px !important;
+  min-width: 1px;
+  flex-shrink: 0;
+  align-self: stretch;
+  background-color: rgba(51, 65, 85, 0.35) !important;
+}
+
+#pait-inline-result.pait-light .pait-inline-divider {
+  background-color: #e2e8f0 !important;
+}
+
+#pait-inline-result .pait-inline-columns .pait-inline-textarea {
+  flex: 1;
+  min-width: 0;
+  min-height: 120px;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  font-family: sans-serif;
+  line-height: 1.55;
+}
+
+/*
+ * Ієрархія яскравості (орієнтир DeepL / Apple Translate)
+ */
+#pait-inline-result:not(.pait-light) .pait-inline-source {
+  color: #94a3b8 !important;
+}
+
+#pait-inline-result:not(.pait-light) .pait-inline-target,
+#pait-inline-result:not(.pait-light) .pait-inline-body-copy {
+  color: #ffffff !important;
+}
+
+#pait-inline-result.pait-light .pait-inline-source {
+  color: #64748b !important;
+}
+
+#pait-inline-result.pait-light .pait-inline-target,
+#pait-inline-result.pait-light .pait-inline-body-copy {
+  color: #0f172a !important;
 }
 
 #pait-magic-tooltip button {
@@ -69,41 +279,4 @@
 
 #pait-magic-tooltip.pait-light #pait-btn-summarize:hover {
   color: #9333ea;
-}
-
-#pait-inline-result.pait-light {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
-  border: 1px solid #e2e8f0 !important;
-  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.12) !important;
-}
-
-#pait-inline-result.pait-light .pait-inline-toolbar {
-  border-bottom-color: #e2e8f0 !important;
-}
-
-#pait-inline-result.pait-light .pait-inline-label {
-  color: #64748b !important;
-}
-
-#pait-inline-result.pait-light .pait-inline-select {
-  background: #f8fafc !important;
-  color: #334155 !important;
-  border-color: #e2e8f0 !important;
-}
-
-#pait-inline-result.pait-light .pait-inline-textarea {
-  color: #0f172a !important;
-}
-
-#pait-inline-result.pait-light .pait-inline-target {
-  color: #059669 !important;
-}
-
-#pait-inline-result.pait-light .pait-inline-divider {
-  background-color: #e2e8f0 !important;
-}
-
-#pait-inline-result.pait-light .pait-inline-close {
-  color: #64748b !important;
 }

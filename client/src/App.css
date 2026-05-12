@@ -3,7 +3,7 @@
    ============================================================================= */
 
 :root {
-  --radius-window: 24px;
+  --radius-window: 14px;
   --radius-control: 16px;
   --transition-pait: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --status-success-bg: rgba(34, 197, 94, 0.1);
@@ -15,14 +15,14 @@
 /* Light — індиго (fallback до першого paint = світла) */
 :root,
 :root[data-theme='light'] {
-  --bg-main: #f4f7fe;
+  --bg-main: #f1f5f9;
   --bg-card: #ffffff;
   --text-primary: #1e293b;
   --text-secondary: #64748b;
   --accent-primary: #6366f1;
   --accent-hover: #4f46e5;
-  --border-color: rgba(226, 232, 240, 0.6);
-  --card-shadow: 0px 10px 30px rgba(17, 12, 46, 0.04);
+  --border-color: #e2e8f0;
+  --card-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.05);
   --input-bg: #f8fafc;
   --submit-text: #ffffff;
   --btn-glow: 0 8px 24px rgba(99, 102, 241, 0.22);
@@ -36,8 +36,8 @@
   --text-secondary: #8b9bb4;
   --accent-primary: #818cf8;
   --accent-hover: #6366f1;
-  --border-color: rgba(255, 255, 255, 0.06);
-  --card-shadow: 0px 10px 30px rgba(0, 0, 0, 0.4);
+  --border-color: #334155;
+  --card-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.35);
   --input-bg: #13161b;
   --submit-text: #ffffff;
   --btn-glow: 0 8px 24px rgba(129, 140, 248, 0.28);
@@ -112,11 +112,35 @@ body::before {
 #root {
   width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
+  padding: 10px;
+  box-sizing: border-box;
+  background: var(--bg-main);
 }
 
-/* --- Scrollbar (6px, thumb = border tone) --- */
+/* --- Layout shell --- */
+.pait-layout-root {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.06);
+  background: var(--bg-main);
+  color: var(--text-primary);
+}
+
+:root[data-theme='dark'] .pait-layout-root {
+  border-color: #334155;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.45);
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--border-color) transparent;
@@ -134,13 +158,6 @@ body::before {
 *::-webkit-scrollbar-thumb {
   background: var(--border-color);
   border-radius: 6px;
-}
-
-/* --- Layout shell --- */
-.pait-layout-root {
-  min-height: 100vh;
-  background: var(--bg-main);
-  color: var(--text-primary);
 }
 
 .pait-main {
@@ -176,13 +193,18 @@ body::before {
   }
 }
 
-/* --- Top navigation --- */
+/* --- Top navigation (картка на сірому shell) --- */
 .pait-header {
   flex-shrink: 0;
-  border-bottom: 1px solid var(--border-color);
-  background: color-mix(in srgb, var(--bg-card) 82%, transparent);
-  backdrop-filter: blur(14px);
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  box-shadow: var(--card-shadow);
   transition: var(--transition-pait);
+}
+
+:root[data-theme='light'] .pait-header {
+  background: #ffffff;
 }
 
 .pait-header-inner {
@@ -210,6 +232,25 @@ body::before {
   color: var(--accent-primary);
 }
 
+/* Обгортка навігації: підказка скролу (fade справа) + контекст для ::after */
+.pait-nav-scroll-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.pait-nav-scroll-wrap--fade-right::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 2rem;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(to left, var(--bg-card), transparent);
+}
+
 .pait-nav-row {
   display: flex;
   min-width: 0;
@@ -220,6 +261,56 @@ body::before {
   overscroll-behavior-x: contain;
   padding: 0.65rem 1rem;
   border-left: 1px solid var(--border-color);
+}
+
+/* Світла тема: ряд навігації — чисто білий «лист» на сірому фоні shell */
+:root[data-theme='light'] .pait-nav-row {
+  background: #ffffff;
+}
+
+:root[data-theme='light'] .pait-nav-scroll-wrap--fade-right::after {
+  background: linear-gradient(to left, #ffffff, transparent);
+}
+
+/* Тонкий видимий горизонтальний скролбар лише для ряду вкладок */
+.pait-nav-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.45) rgba(148, 163, 184, 0.2);
+}
+
+.pait-nav-scroll::-webkit-scrollbar {
+  height: 5px;
+}
+
+.pait-nav-scroll::-webkit-scrollbar-track {
+  margin: 0 4px;
+  background: rgba(148, 163, 184, 0.18);
+  border-radius: 999px;
+}
+
+.pait-nav-scroll::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.45);
+  border-radius: 999px;
+}
+
+.pait-nav-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(71, 85, 105, 0.55);
+}
+
+:root[data-theme='dark'] .pait-nav-scroll {
+  scrollbar-color: rgba(148, 163, 184, 0.35) rgba(51, 65, 85, 0.35);
+}
+
+:root[data-theme='dark'] .pait-nav-scroll::-webkit-scrollbar-track {
+  background: rgba(51, 65, 85, 0.45);
+}
+
+:root[data-theme='dark'] .pait-nav-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+:root[data-theme='dark'] .pait-nav-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(203, 213, 225, 0.45);
 }
 
 .pait-nav-tab {
@@ -453,6 +544,11 @@ button.pait-nav-tab:hover {
   flex-direction: column;
 }
 
+/* Робоча зона картки (переклад / саммарі): білий «лист» у світлій темі */
+:root[data-theme='light'] .pait-io-body {
+  background: #ffffff;
+}
+
 .pait-io-inner {
   position: relative;
   flex: 1;
@@ -632,12 +728,14 @@ select.pait-native-select option {
 
 /* --- Auth (premium) --- */
 .pait-auth-screen {
-  min-height: calc(100vh - 56px);
+  flex: 1;
+  min-height: 0;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 32px 20px;
-  background: var(--bg-main);
+  background: transparent;
 }
 
 .pait-auth-card {
@@ -1100,7 +1198,8 @@ select.pait-native-select option {
   max-width: 440px;
   margin: 0 auto;
   padding: 32px 16px;
-  min-height: calc(100vh - 56px);
+  flex: 1;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1598,6 +1697,7 @@ select.pait-native-select option {
   margin: 0 auto;
   padding: 2rem 1rem;
   flex: 1;
+  min-height: 0;
 }
 
 .not-found-content {

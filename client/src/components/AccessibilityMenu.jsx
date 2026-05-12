@@ -41,7 +41,7 @@ const AccessibilityMenu = () => {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-[300px] p-4 space-y-4"
+        className="w-[300px] space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-card"
       >
         {/* Text Size */}
         <div className="space-y-2">

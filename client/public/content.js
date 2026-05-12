@@ -3,6 +3,9 @@ console.log('PAIT Content Script Loaded!');
 const TOOLTIP_ID = 'pait-magic-tooltip';
 const INLINE_RESULT_ID = 'pait-inline-result';
 
+/** Іконка Sparkles (Lucide-совісний SVG) для Summarize — content script без React. */
+const PAIT_SPARKLES_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>`;
+
 let isDragging = false;
 let offsetX = 0;
 let offsetY = 0;
@@ -177,6 +180,7 @@ document.addEventListener('mouseup', (e) => {
 
       const resultBox = document.createElement('div');
       resultBox.id = 'pait-inline-result';
+      resultBox.classList.add('pait-inline-card');
 
       const tooltipTop = Number.parseInt(tooltip.style.top || '0', 10) || 0;
 
@@ -186,15 +190,9 @@ document.addEventListener('mouseup', (e) => {
         left: tooltip.style.left,
         right: 'auto',
         bottom: 'auto',
-        backgroundColor: '#1e293b',
-        color: '#f8fafc',
-        padding: '12px',
-        borderRadius: '8px',
-        border: '1px solid #334155',
-        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
         width: '350px',
         resize: 'both',
-        overflow: 'auto',
+        overflow: 'hidden',
         minWidth: '300px',
         minHeight: '150px',
         maxWidth: '800px',
@@ -208,25 +206,30 @@ document.addEventListener('mouseup', (e) => {
       });
 
       resultBox.innerHTML = `
-        <div class="pait-inline-toolbar" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; border-bottom: 1px solid #334155; padding-bottom: 4px;">
-          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-            <span class="pait-inline-label" style="font-size: 12px; color: #94a3b8; font-weight: bold;">✨ Summary</span>
-            <select id="pait-summary-lang" class="pait-inline-select" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; font-size: 12px; outline: none; padding: 2px 4px;">
+        <div class="pait-inline-toolbar pait-inline-card__header">
+          <div class="pait-inline-summary-row">
+            <div class="pait-inline-summary-title">
+              <span class="pait-inline-sparkles-icon">${PAIT_SPARKLES_SVG}</span>
+              <span class="pait-inline-label">Summary</span>
+            </div>
+            <select id="pait-summary-lang" class="pait-inline-select">
               <option value="uk" selected>Ukrainian</option>
               <option value="en">English</option>
               <option value="pl">Polish</option>
               <option value="es">Spanish</option>
               <option value="de">German</option>
             </select>
-            <select id="pait-summary-length" class="pait-inline-select" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; font-size: 12px; outline: none; padding: 2px 4px;">
+            <select id="pait-summary-length" class="pait-inline-select">
               <option value="short">Short (1-2 sentences)</option>
               <option value="medium" selected>Standard</option>
               <option value="long">Detailed</option>
             </select>
           </div>
-          <button id="pait-close-inline" class="pait-inline-close" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px;">×</button>
+          <button type="button" id="pait-close-inline" class="pait-inline-close" aria-label="Close">×</button>
         </div>
-        <textarea id="pait-summary-content" class="pait-inline-textarea" readonly style="width: 100%; flex: 1; height: 100%; background: transparent; color: #f8fafc; border: none; resize: none; outline: none; font-size: 14px; font-family: sans-serif;">⏳ Summarizing...</textarea>
+        <div class="pait-inline-card__body">
+          <textarea id="pait-summary-content" class="pait-inline-textarea pait-inline-body-copy" readonly>⏳ Summarizing...</textarea>
+        </div>
       `;
 
       document.body.appendChild(resultBox);
@@ -261,7 +264,7 @@ document.addEventListener('mouseup', (e) => {
       const requestSummary = () => {
         const contentEl = document.getElementById('pait-summary-content');
         if (contentEl) {
-          contentEl.style.color = '#f8fafc';
+          contentEl.style.removeProperty('color');
           contentEl.value = '⏳ Summarizing...';
         }
 
@@ -279,7 +282,7 @@ document.addEventListener('mouseup', (e) => {
           if (chrome.runtime.lastError || !response || !response.ok) {
             setError(chrome.runtime.lastError || response?.error);
           } else {
-            el.style.color = '#f8fafc';
+            el.style.removeProperty('color');
             el.value = response.data ?? '';
           }
         }
@@ -318,25 +321,19 @@ document.addEventListener('mouseup', (e) => {
       // Створюємо віконце для результату
       const resultBox = document.createElement('div');
       resultBox.id = 'pait-inline-result';
+      resultBox.classList.add('pait-inline-card');
 
       const tooltipTop = Number.parseInt(tooltip.style.top || '0', 10) || 0;
 
-      // Стилізуємо віконце (Tailwind-like стилі через JS)
       Object.assign(resultBox.style, {
         position: 'absolute',
-        top: `${tooltipTop + 40}px`, // Трохи нижче тултипу
+        top: `${tooltipTop + 40}px`,
         left: tooltip.style.left,
         right: 'auto',
         bottom: 'auto',
-        backgroundColor: '#1e293b', // slate-800
-        color: '#f8fafc', // slate-50
-        padding: '12px',
-        borderRadius: '8px',
-        border: '1px solid #334155', // slate-700
-        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
         width: '500px',
         resize: 'both',
-        overflow: 'auto',
+        overflow: 'hidden',
         minWidth: '300px',
         minHeight: '150px',
         maxWidth: '800px',
@@ -350,20 +347,22 @@ document.addEventListener('mouseup', (e) => {
       });
 
       resultBox.innerHTML = `
-      <div class="pait-inline-toolbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid #334155; padding-bottom: 4px;">
-        <select id="pait-lang-select" class="pait-inline-select" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; font-size: 12px; outline: none; padding: 2px 4px;">
+      <div class="pait-inline-toolbar pait-inline-card__header">
+        <select id="pait-lang-select" class="pait-inline-select">
           <option value="uk">Ukrainian</option>
           <option value="en">English</option>
           <option value="pl">Polish</option>
           <option value="es">Spanish</option>
           <option value="de">German</option>
         </select>
-        <button id="pait-close-inline" class="pait-inline-close" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px;">×</button>
+        <button type="button" id="pait-close-inline" class="pait-inline-close" aria-label="Close">×</button>
       </div>
-      <div style="display: flex; gap: 8px; flex: 1; min-height: 120px;">
-        <textarea id="pait-source-editor" class="pait-inline-textarea" style="flex: 1; height: 100%; background: transparent; color: #f8fafc; border: none; resize: none; outline: none; font-size: 14px; font-family: sans-serif;"></textarea>
-        <div class="pait-inline-divider" style="width: 1px; background-color: #334155;"></div>
-        <textarea id="pait-target-editor" class="pait-inline-textarea pait-inline-target" readonly style="flex: 1; height: 100%; background: transparent; color: #10b981; border: none; resize: none; outline: none; font-size: 14px; font-family: sans-serif;"></textarea>
+      <div class="pait-inline-card__body">
+        <div class="pait-inline-columns">
+          <textarea id="pait-source-editor" class="pait-inline-textarea pait-inline-source"></textarea>
+          <div class="pait-inline-divider" aria-hidden="true"></div>
+          <textarea id="pait-target-editor" class="pait-inline-textarea pait-inline-target" readonly></textarea>
+        </div>
       </div>
     `;
 
@@ -392,6 +391,7 @@ document.addEventListener('mouseup', (e) => {
       const setLoading = () => {
         const targetEditor = document.getElementById('pait-target-editor');
         if (!targetEditor) return;
+        targetEditor.style.removeProperty('color');
         targetEditor.value = '⏳ Translating...';
       };
 
@@ -426,7 +426,7 @@ document.addEventListener('mouseup', (e) => {
             if (chrome.runtime.lastError || !response || !response.ok) {
               showError(chrome.runtime.lastError || response?.error);
             } else {
-              targetEditor.style.color = '#10b981';
+              targetEditor.style.removeProperty('color');
               // Безпечно: рендеримо як текст, без HTML
               targetEditor.value = response.data ?? '';
             }

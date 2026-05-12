@@ -8,7 +8,7 @@ const Layout = () => {
   const location = useLocation();
 
   return (
-    <div className="pait-layout-root relative flex h-screen w-full flex-col overflow-hidden">
+    <div className="pait-layout-root relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
       <Navbar onOpenHistory={() => setIsHistoryOpen(true)} />
       <main className="pait-main">
         <div key={location.pathname} className="pait-page">

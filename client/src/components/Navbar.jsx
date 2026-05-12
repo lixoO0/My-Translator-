@@ -1,5 +1,5 @@
 import { Link, NavLink } from 'react-router-dom';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   BookOpen,
   FileText,
@@ -21,6 +21,7 @@ export const Navbar = ({ onOpenHistory }) => {
   const { theme, toggleTheme } = useTheme();
   const { language, toggleLanguage, t } = useLanguage();
   const navRef = useRef(null);
+  const [showNavScrollFade, setShowNavScrollFade] = useState(false);
 
   useEffect(() => {
     const el = navRef.current;
@@ -32,8 +33,23 @@ export const Navbar = ({ onOpenHistory }) => {
       el.scrollLeft += e.deltaY;
     };
 
+    const updateScrollFade = () => {
+      const overflow = el.scrollWidth > el.clientWidth + 2;
+      const atEnd = el.scrollLeft >= el.scrollWidth - el.clientWidth - 2;
+      setShowNavScrollFade(overflow && !atEnd);
+    };
+
     el.addEventListener('wheel', handleWheel, { passive: false });
-    return () => el.removeEventListener('wheel', handleWheel);
+    el.addEventListener('scroll', updateScrollFade, { passive: true });
+    const ro = new ResizeObserver(updateScrollFade);
+    ro.observe(el);
+    updateScrollFade();
+
+    return () => {
+      el.removeEventListener('wheel', handleWheel);
+      el.removeEventListener('scroll', updateScrollFade);
+      ro.disconnect();
+    };
   }, [isAuthenticated]);
 
   const tabClass = ({ isActive }) =>
@@ -51,7 +67,15 @@ export const Navbar = ({ onOpenHistory }) => {
           PAIT
         </Link>
 
-        <nav ref={navRef} className="pait-nav-row scrollbar-hide">
+        <div
+          className={[
+            'pait-nav-scroll-wrap',
+            showNavScrollFade ? 'pait-nav-scroll-wrap--fade-right' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          <nav ref={navRef} className="pait-nav-row pait-nav-scroll">
           {!isAuthenticated ? (
             <>
               <NavLink
@@ -178,7 +202,8 @@ export const Navbar = ({ onOpenHistory }) => {
               </div>
             </>
           )}
-        </nav>
+          </nav>
+        </div>
       </div>
     </header>
   );
